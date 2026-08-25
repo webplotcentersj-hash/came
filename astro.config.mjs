@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config';
 import vercel from '@astrojs/vercel';
 
 export default defineConfig({
+  site: 'https://came-lake.vercel.app',
   output: 'server',
   adapter: vercel({
     webAnalytics: { enabled: false },
