@@ -1,0 +1,106 @@
+---
+const anio = new Date().getFullYear();
+
+// Alturas ajustadas una por una: cada logo tiene distinta proporción y peso visual.
+const organizadores = [
+  { archivo: 'jefes.png', nombre: 'JeFES — Jóvenes Empresarios de la Federación Económica de San Juan', alto: 84 },
+  { archivo: 'fesj.png', nombre: 'FESJ — Federación Económica de San Juan', alto: 88 },
+  { archivo: 'came-joven.png', nombre: 'CAME Joven', alto: 62 },
+  { archivo: 'came.png', nombre: 'CAME — Confederación Argentina de la Mediana Empresa', alto: 54 },
+];
+---
+
+<footer class="pie grano">
+  <div class="contenedor">
+    <div class="pie-marca">
+      <img src="/logos/lockup-blanco.png" width="1000" height="612" alt="Premio Joven Empresario Sanjuanino" loading="lazy" decoding="async" />
+    </div>
+
+    <p class="titulo-org">Organizan</p>
+
+    <ul class="logos">
+      {organizadores.map((o) => (
+        <li>
+          <img
+            src={`/logos/${o.archivo}`}
+            alt={o.nombre}
+            title={o.nombre}
+            style={`height:${o.alto}px`}
+            loading="lazy"
+            decoding="async"
+          />
+        </li>
+      ))}
+    </ul>
+
+    <div class="legal">
+      <nav class="enlaces" aria-label="Enlaces del pie">
+        <a href="/#postulate">Postulate</a>
+        <a href="/bases">Bases y condiciones</a>
+        <a href="mailto:premio@camejovensanjuan.org">premio@camejovensanjuan.org</a>
+        <a href="/admin">Panel</a>
+      </nav>
+      <p class="fino">Premio Joven Empresario Sanjuanino · Edición {anio}</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .pie {
+    position: relative;
+    background:
+      radial-gradient(80% 100% at 50% 0%, rgba(102, 45, 145, .55) 0%, transparent 70%),
+      var(--violeta-950);
+    color: rgba(255, 255, 255, .8);
+    padding: 4.5rem 0 2.5rem;
+    overflow: hidden;
+  }
+
+  .pie-marca { text-align: center; margin-bottom: 3rem; }
+  .pie-marca img { width: 260px; height: auto; margin-inline: auto; opacity: .95; }
+
+  .titulo-org {
+    text-align: center;
+    font-family: var(--display);
+    font-size: .7rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--arena);
+    margin-bottom: 1.75rem;
+    position: relative;
+  }
+  .titulo-org::before,
+  .titulo-org::after {
+    content: ''; position: absolute; top: 50%; width: min(20%, 150px); height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(199, 178, 153, .5));
+  }
+  .titulo-org::before { right: calc(50% + 5.5rem); }
+  .titulo-org::after { left: calc(50% + 5.5rem); transform: scaleX(-1); }
+  @media (max-width: 620px) { .titulo-org::before, .titulo-org::after { display: none; } }
+
+  .logos {
+    list-style: none; margin: 0 0 3rem; padding: 0;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 2.5rem 3.5rem;
+  }
+  .logos img {
+    width: auto; max-width: 210px;
+    opacity: .85;
+    transition: opacity .3s ease, transform .3s ease;
+  }
+  .logos li:hover img { opacity: 1; transform: translateY(-3px); }
+  @media (max-width: 620px) { .logos { gap: 2rem 2.25rem; } .logos img { transform: scale(.85); } }
+
+  .legal {
+    text-align: center;
+    border-top: 1px solid rgba(255, 216, 221, .13);
+    padding-top: 2rem;
+  }
+  .enlaces {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: .6rem 1.75rem;
+    margin-bottom: 1.1rem;
+    font-size: .85rem;
+  }
+  .enlaces a { color: rgba(255, 216, 221, .82); }
+  .enlaces a:hover { color: #fff; }
+  .fino { font-size: .78rem; color: rgba(255, 255, 255, .45); margin: 0; }
+</style>

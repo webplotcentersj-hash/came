@@ -1,0 +1,502 @@
+---
+const anioActual = new Date().getFullYear();
+const rubros = [
+  'Comercio', 'Industria / Manufactura', 'Servicios', 'Agro y agroindustria',
+  'Minería y proveedores', 'Turismo y gastronomía', 'Tecnología y software',
+  'Construcción', 'Salud', 'Educación', 'Economía del conocimiento', 'Otro',
+];
+const departamentos = [
+  'Capital', 'Rawson', 'Chimbas', 'Rivadavia', 'Santa Lucía', 'Pocito', 'Caucete',
+  'Albardón', 'Angaco', '9 de Julio', '25 de Mayo', 'San Martín', 'Sarmiento',
+  'Zonda', 'Ullum', 'Jáchal', 'Iglesia', 'Calingasta', 'Valle Fértil',
+];
+---
+
+<section class="formulario" id="postulate">
+  <div class="halo-form" aria-hidden="true"></div>
+
+  <div class="contenedor contenedor-angosto">
+    <header class="form-header reveal">
+      <span class="pastilla pastilla-oro">Formulario de inscripción</span>
+      <h2>Completá tu postulación</h2>
+      <p class="bajada">
+        Toma menos de 5 minutos y no necesitás adjuntar documentación. Los datos se usan
+        únicamente para la evaluación del premio y no se comparten con terceros.
+      </p>
+    </header>
+
+    <div class="selector" role="tablist" aria-label="Tipo de inscripción">
+      <button type="button" class="selector-op activo" data-tipo="postulacion" role="tab" aria-selected="true">
+        <span class="selector-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="3.5" /><path d="M5 20a7 7 0 0 1 14 0" />
+          </svg>
+        </span>
+        <span>
+          <strong>Me postulo</strong>
+          <em>Soy quien lleva adelante la empresa</em>
+        </span>
+      </button>
+      <button type="button" class="selector-op" data-tipo="nominacion" role="tab" aria-selected="false">
+        <span class="selector-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3.5l2.5 5.2 5.6.8-4 4 .9 5.7-5-2.7-5 2.7.9-5.7-4-4 5.6-.8z" />
+          </svg>
+        </span>
+        <span>
+          <strong>Nomino a alguien</strong>
+          <em>Quiero proponer a otra persona</em>
+        </span>
+      </button>
+    </div>
+
+    <form id="form-postulacion" class="form-card" method="post" action="/api/postular" novalidate>
+      <div class="progreso" aria-hidden="true"><span id="progreso-barra"></span></div>
+
+      <div class="form-cuerpo">
+        <input type="hidden" name="tipo" value="postulacion" />
+        <!-- trampa anti-spam: invisible para personas -->
+        <div class="sr-only" aria-hidden="true">
+          <label for="sitio-web-extra">No completar</label>
+          <input id="sitio-web-extra" type="text" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+        <input type="hidden" name="t0" id="campo-t0" value="" />
+
+        <fieldset class="bloque-nominador" hidden>
+          <legend><i>0</i> Tus datos (quien nomina)</legend>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="nominador_nombre">Tu nombre y apellido <span class="req">*</span></label>
+              <input class="control" id="nominador_nombre" name="nominador_nombre" type="text" autocomplete="name" />
+            </div>
+            <div class="campo">
+              <label for="nominador_email">Tu email <span class="req">*</span></label>
+              <input class="control" id="nominador_email" name="nominador_email" type="email" autocomplete="email" />
+            </div>
+          </div>
+          <div class="campo">
+            <label for="nominador_tel">Tu teléfono</label>
+            <input class="control" id="nominador_tel" name="nominador_tel" type="tel" />
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>
+            <i>1</i>
+            <b data-legend-postulacion="Tus datos" data-legend-nominacion="Datos de la persona nominada">Tus datos</b>
+          </legend>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="nombre">Nombre <span class="req">*</span></label>
+              <input class="control" id="nombre" name="nombre" type="text" required autocomplete="given-name" />
+            </div>
+            <div class="campo">
+              <label for="apellido">Apellido <span class="req">*</span></label>
+              <input class="control" id="apellido" name="apellido" type="text" required autocomplete="family-name" />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="email">Email <span class="req">*</span></label>
+              <input class="control" id="email" name="email" type="email" required autocomplete="email" />
+            </div>
+            <div class="campo">
+              <label for="telefono">Teléfono / WhatsApp <span class="req">*</span></label>
+              <input class="control" id="telefono" name="telefono" type="tel" required placeholder="264 400 0000" />
+            </div>
+          </div>
+          <div class="campo">
+            <label for="fecha_nacimiento">Fecha de nacimiento <span class="req">*</span></label>
+            <input class="control" id="fecha_nacimiento" name="fecha_nacimiento" type="date" required />
+            <p class="ayuda" id="ayuda-edad">Requisito del premio: tener entre 18 y 40 años.</p>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><i>2</i> <b>La empresa</b></legend>
+          <div class="campo">
+            <label for="empresa">Nombre de la empresa <span class="req">*</span></label>
+            <input class="control" id="empresa" name="empresa" type="text" required autocomplete="organization" />
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="cuit">CUIT <span class="req">*</span></label>
+              <input class="control" id="cuit" name="cuit" type="text" required inputmode="numeric" placeholder="30-12345678-9" />
+            </div>
+            <div class="campo">
+              <label for="anio_inicio">Año de inicio de actividades <span class="req">*</span></label>
+              <input class="control" id="anio_inicio" name="anio_inicio" type="number" required inputmode="numeric" min="1900" max={anioActual} placeholder={String(anioActual - 3)} />
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="rubro">Rubro</label>
+              <select class="control" id="rubro" name="rubro">
+                <option value="">Elegí una opción…</option>
+                {rubros.map((r) => <option value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div class="campo">
+              <label for="localidad">Departamento <span class="req">*</span></label>
+              <select class="control" id="localidad" name="localidad" required>
+                <option value="">Elegí una opción…</option>
+                {departamentos.map((d) => <option value={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="campo">
+              <label for="empleados">Cantidad de empleados</label>
+              <select class="control" id="empleados" name="empleados">
+                <option value="">Elegí una opción…</option>
+                <option value="Solo yo">Solo yo</option>
+                <option value="2 a 5">2 a 5</option>
+                <option value="6 a 15">6 a 15</option>
+                <option value="16 a 50">16 a 50</option>
+                <option value="Más de 50">Más de 50</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="web">Web o red social</label>
+              <input class="control" id="web" name="web" type="text" placeholder="instagram.com/tuempresa" />
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend><i>3</i> <b>La historia</b></legend>
+          <div class="campo">
+            <label for="historia" data-label-postulacion="Contanos tu historia" data-label-nominacion="Contanos por qué merece el premio">
+              Contanos tu historia <span class="req">*</span>
+            </label>
+            <textarea class="control" id="historia" name="historia" required minlength="50"
+              placeholder="Cómo empezó el proyecto, qué problema resuelve, cómo creció, qué impacto genera en San Juan, qué desafíos superó…"></textarea>
+            <p class="ayuda contador-linea">
+              <span class="contador-barra" aria-hidden="true"><span id="contador-relleno"></span></span>
+              <span id="contador">0</span> / 50 caracteres mínimos
+            </p>
+          </div>
+          <div class="campo campo-check">
+            <label class="check">
+              <input type="checkbox" name="acepta" required />
+              <span>Confirmo que los datos son correctos y acepto que sean utilizados para la evaluación del premio. <span class="req">*</span></span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div id="form-alerta" class="alerta" hidden role="alert"></div>
+
+        <button type="submit" class="btn btn-violeta btn-lg btn-enviar">
+          <span class="txt-enviar">Enviar postulación</span>
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h11M11 5.5 15.5 10 11 14.5"/></svg>
+        </button>
+        <p class="ayuda pie-form">
+          El equipo organizador se comunica por el email y el teléfono que indicaste.
+        </p>
+      </div>
+    </form>
+  </div>
+</section>
+
+<style>
+  .formulario {
+    position: relative; overflow: hidden;
+    padding: 6.5rem 0 7rem;
+    background: linear-gradient(180deg, var(--rosa-3) 0%, var(--fondo) 40%);
+  }
+  @media (max-width: 700px) { .formulario { padding: 4.5rem 0 5rem; } }
+
+  .halo-form {
+    position: absolute; width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 216, 221, .75) 0%, transparent 68%);
+    top: -300px; left: 50%; transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .formulario > .contenedor { position: relative; z-index: 1; }
+
+  .form-header { text-align: center; margin-bottom: 2.25rem; }
+  .form-header h2 { margin-top: 1rem; color: var(--violeta); }
+  .bajada { color: var(--tinta-suave); max-width: 54ch; margin-inline: auto; text-wrap: pretty; }
+  .pastilla-oro { background: var(--grad-oro); color: #33203f; }
+
+  /* ---------- selector postulación / nominación ---------- */
+  .selector {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .8rem;
+    max-width: 620px; margin: 0 auto 1.6rem;
+  }
+  .selector-op {
+    display: flex; align-items: center; gap: .85rem; text-align: left;
+    padding: 1rem 1.15rem;
+    background: var(--blanco); border: 2px solid var(--linea); border-radius: var(--radio);
+    font: inherit; color: var(--tinta-suave); cursor: pointer;
+    box-shadow: var(--sombra-sm);
+    transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+  }
+  .selector-op:hover { border-color: var(--arena); transform: translateY(-2px); }
+  .selector-op strong { display: block; font-family: var(--display); color: var(--tinta); font-size: 1rem; line-height: 1.3; }
+  .selector-op em { display: block; font-style: normal; font-size: .77rem; line-height: 1.35; }
+  .selector-icono {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--rosa-2); color: var(--violeta);
+    transition: background-color .22s ease, color .22s ease;
+  }
+  .selector-icono svg { width: 20px; height: 20px; }
+  .selector-op.activo {
+    border-color: var(--violeta);
+    box-shadow: 0 0 0 4px rgba(102, 45, 145, .1), var(--sombra-sm);
+  }
+  .selector-op.activo strong { color: var(--violeta); }
+  .selector-op.activo .selector-icono { background: var(--grad-violeta); color: var(--rosa); }
+  @media (max-width: 560px) { .selector { grid-template-columns: 1fr; } }
+
+  /* ---------- tarjeta ---------- */
+  .form-card {
+    background: var(--blanco);
+    border: 1px solid var(--linea);
+    border-radius: var(--radio-xl);
+    box-shadow: var(--sombra-lg);
+    overflow: hidden;
+  }
+  .form-cuerpo { padding: 2.5rem; }
+  @media (max-width: 640px) { .form-cuerpo { padding: 1.5rem 1.25rem; } }
+
+  .progreso { height: 4px; background: var(--linea-2); }
+  .progreso span {
+    display: block; height: 100%; width: 0%;
+    background: var(--grad-oro);
+    transition: width .45s cubic-bezier(.2,.9,.3,1);
+  }
+
+  fieldset { border: 0; padding: 0; margin: 0 0 1.9rem; }
+  fieldset + fieldset { border-top: 1px solid var(--linea-2); padding-top: 1.8rem; }
+  fieldset:last-of-type { margin-bottom: 1.25rem; }
+
+  legend {
+    display: flex; align-items: center; gap: .65rem;
+    font-family: var(--display);
+    font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--violeta); padding: 0; margin-bottom: 1.15rem;
+  }
+  legend i {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--rosa); color: var(--violeta);
+    font-style: normal; font-size: .74rem; letter-spacing: 0;
+  }
+  legend b { font-weight: 700; }
+
+  .bloque-nominador {
+    background: linear-gradient(135deg, var(--rosa-3), var(--rosa-2));
+    border: 1px solid var(--rosa);
+    border-radius: var(--radio);
+    padding: 1.35rem 1.35rem .15rem;
+    margin-bottom: 1.9rem;
+  }
+  .bloque-nominador + fieldset { border-top: 0; padding-top: 0; }
+
+  .campo-check { margin-top: .75rem; }
+  .check {
+    display: flex; gap: .75rem; align-items: flex-start;
+    font-weight: 400 !important; font-size: .88rem; line-height: 1.55; cursor: pointer;
+    background: var(--rosa-3); border-radius: var(--radio-xs); padding: .85rem 1rem;
+  }
+  .check input { margin-top: .2rem; width: 18px; height: 18px; accent-color: var(--violeta); flex-shrink: 0; }
+
+  /* contador de la historia */
+  .contador-linea { display: flex; align-items: center; gap: .6rem; }
+  .contador-barra {
+    display: block; width: 90px; height: 4px; border-radius: 2px;
+    background: var(--linea); overflow: hidden; flex-shrink: 0;
+  }
+  .contador-barra span {
+    display: block; height: 100%; width: 0%;
+    background: var(--violeta-300);
+    transition: width .3s ease, background-color .3s ease;
+  }
+  .contador-linea.completo .contador-barra span { background: var(--exito); }
+
+  .alerta {
+    display: flex; gap: .65rem; align-items: flex-start;
+    padding: .95rem 1.15rem; border-radius: var(--radio-xs);
+    font-size: .88rem; font-weight: 600; line-height: 1.5;
+    background: #fdeceb; color: var(--alerta); border: 1px solid #f3c9c3;
+    margin-bottom: 1.25rem;
+  }
+
+  .btn-enviar { width: 100%; }
+  .btn-enviar svg { width: 19px; height: 19px; }
+  .btn-enviar.cargando { pointer-events: none; opacity: .8; }
+  .pie-form { text-align: center; margin-top: .9rem; }
+</style>
+
+<script>
+  const form = document.getElementById('form-postulacion') as HTMLFormElement;
+  const inputTipo = form.querySelector('input[name="tipo"]') as HTMLInputElement;
+  const bloqueNominador = form.querySelector('.bloque-nominador') as HTMLFieldSetElement;
+  const alerta = document.getElementById('form-alerta') as HTMLDivElement;
+  const boton = form.querySelector('.btn-enviar') as HTMLButtonElement;
+  const txtBoton = form.querySelector('.txt-enviar') as HTMLSpanElement;
+  const historia = document.getElementById('historia') as HTMLTextAreaElement;
+  const contador = document.getElementById('contador') as HTMLSpanElement;
+  const contadorRelleno = document.getElementById('contador-relleno') as HTMLSpanElement;
+  const contadorLinea = contador.closest('.contador-linea') as HTMLElement;
+  const cuit = document.getElementById('cuit') as HTMLInputElement;
+  const nacimiento = document.getElementById('fecha_nacimiento') as HTMLInputElement;
+  const ayudaEdad = document.getElementById('ayuda-edad') as HTMLParagraphElement;
+  const barraProgreso = document.getElementById('progreso-barra') as HTMLSpanElement;
+
+  (document.getElementById('campo-t0') as HTMLInputElement).value = String(Date.now());
+
+  /* ---------- alternar postulación / nominación ---------- */
+  function aplicarTipo(tipo: string) {
+    inputTipo.value = tipo;
+    const esNominacion = tipo === 'nominacion';
+
+    bloqueNominador.hidden = !esNominacion;
+    bloqueNominador.querySelectorAll<HTMLInputElement>('input').forEach((i) => {
+      if (i.name !== 'nominador_tel') i.required = esNominacion;
+    });
+    txtBoton.textContent = esNominacion ? 'Enviar nominación' : 'Enviar postulación';
+
+    document.querySelectorAll<HTMLElement>('[data-legend-postulacion]').forEach((el) => {
+      el.textContent = el.dataset[esNominacion ? 'legendNominacion' : 'legendPostulacion'] ?? '';
+    });
+    const lbl = document.querySelector<HTMLLabelElement>('[data-label-postulacion]');
+    if (lbl) {
+      const texto = lbl.dataset[esNominacion ? 'labelNominacion' : 'labelPostulacion'] ?? '';
+      lbl.innerHTML = texto + ' <span class="req">*</span>';
+    }
+    document.querySelectorAll<HTMLButtonElement>('.selector-op').forEach((b) => {
+      const activo = b.dataset.tipo === tipo;
+      b.classList.toggle('activo', activo);
+      b.setAttribute('aria-selected', String(activo));
+    });
+    actualizarProgreso();
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.selector-op').forEach((b) => {
+    b.addEventListener('click', () => aplicarTipo(b.dataset.tipo!));
+  });
+
+  document.querySelectorAll<HTMLAnchorElement>('[data-abrir-tipo]').forEach((a) => {
+    a.addEventListener('click', () => aplicarTipo(a.dataset.abrirTipo!));
+  });
+
+  if (new URLSearchParams(location.search).get('tipo') === 'nominacion') {
+    aplicarTipo('nominacion');
+  }
+
+  /* ---------- progreso de campos obligatorios ---------- */
+  function actualizarProgreso() {
+    const requeridos = [...form.querySelectorAll<HTMLInputElement>('[required]')]
+      .filter((c) => !c.closest('fieldset')?.hidden);
+    const completos = requeridos.filter((c) =>
+      c.type === 'checkbox' ? c.checked : c.value.trim().length > 0,
+    ).length;
+    const pct = requeridos.length ? (completos / requeridos.length) * 100 : 0;
+    barraProgreso.style.width = `${pct}%`;
+  }
+  form.addEventListener('input', actualizarProgreso);
+  form.addEventListener('change', actualizarProgreso);
+
+  /* ---------- ayudas de campo ---------- */
+  historia.addEventListener('input', () => {
+    const n = historia.value.length;
+    contador.textContent = String(n);
+    contadorRelleno.style.width = `${Math.min(100, (n / 50) * 100)}%`;
+    contadorLinea.classList.toggle('completo', n >= 50);
+  });
+
+  cuit.addEventListener('blur', () => {
+    const d = cuit.value.replace(/\D/g, '');
+    if (d.length === 11) cuit.value = d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10);
+  });
+
+  // Muestra la edad calculada en vivo para que se vea si entra en el rango.
+  nacimiento.addEventListener('change', () => {
+    if (!nacimiento.value) {
+      ayudaEdad.textContent = 'Requisito del premio: tener entre 18 y 40 años.';
+      ayudaEdad.style.color = '';
+      return;
+    }
+    const n = new Date(nacimiento.value);
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - n.getFullYear();
+    const m = hoy.getMonth() - n.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < n.getDate())) edad--;
+
+    if (Number.isNaN(edad)) return;
+    if (edad < 18 || edad > 40) {
+      ayudaEdad.textContent = `Edad: ${edad} años. El premio es para personas de 18 a 40 años.`;
+      ayudaEdad.style.color = 'var(--alerta)';
+    } else {
+      ayudaEdad.textContent = `Edad: ${edad} años. Cumplís el requisito.`;
+      ayudaEdad.style.color = 'var(--exito)';
+    }
+  });
+
+  /* ---------- envío ---------- */
+  function limpiarErrores() {
+    form.querySelectorAll('.campo.error').forEach((c) => c.classList.remove('error'));
+    form.querySelectorAll('.msg-error').forEach((m) => m.remove());
+    alerta.hidden = true;
+  }
+
+  function mostrarErrores(errores: Record<string, string>) {
+    let primero: HTMLElement | null = null;
+    for (const [campo, mensaje] of Object.entries(errores)) {
+      const input = form.querySelector<HTMLElement>('[name="' + campo + '"]');
+      const cont = input?.closest('.campo');
+      if (!cont) continue;
+      cont.classList.add('error');
+      const span = document.createElement('span');
+      span.className = 'msg-error';
+      span.textContent = mensaje;
+      cont.appendChild(span);
+      if (!primero) primero = input!;
+    }
+    alerta.textContent = 'Revisá los campos marcados y volvé a intentar.';
+    alerta.hidden = false;
+    (primero ?? alerta).scrollIntoView({ behavior: 'smooth', block: 'center' });
+    primero?.focus({ preventScroll: true });
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    limpiarErrores();
+
+    if (!form.reportValidity()) return;
+
+    boton.classList.add('cargando');
+    boton.disabled = true;
+    const textoOriginal = txtBoton.textContent;
+    txtBoton.textContent = 'Enviando…';
+
+    try {
+      const res = await fetch('/api/postular', {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+        body: new FormData(form),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        window.location.href = data.redirect ?? '/gracias';
+        return;
+      }
+      if (data.errores) mostrarErrores(data.errores);
+      else {
+        alerta.textContent = data.mensaje ?? 'No pudimos enviar el formulario. Intentá de nuevo en unos minutos.';
+        alerta.hidden = false;
+      }
+    } catch {
+      alerta.textContent = 'Hubo un problema de conexión. Revisá tu internet e intentá de nuevo.';
+      alerta.hidden = false;
+    } finally {
+      boton.classList.remove('cargando');
+      boton.disabled = false;
+      txtBoton.textContent = textoOriginal;
+    }
+  });
+</script>

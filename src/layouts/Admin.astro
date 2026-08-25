@@ -1,0 +1,108 @@
+---
+import '../styles/global.css';
+import LogoPremio from '../components/LogoPremio.astro';
+
+interface Props {
+  title: string;
+  usuario: { nombre: string; email: string };
+  activo?: 'listado' | 'detalle';
+}
+
+const { title, usuario, activo = 'listado' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · Panel</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="admin-body">
+    <header class="admin-barra">
+      <div class="admin-barra-int">
+        <a href="/admin" class="admin-marca">
+          <LogoPremio size={32} variante="blanco" />
+          <span>
+            <strong>Panel de postulaciones</strong>
+            <em>Premio Joven Empresario Sanjuanino</em>
+          </span>
+        </a>
+        <nav class="admin-nav">
+          <a href="/admin" class={activo === 'listado' ? 'activo' : ''}>Postulaciones</a>
+          <a href="/" target="_blank" rel="noopener">Ver landing ↗</a>
+        </nav>
+        <div class="admin-usuario">
+          <span title={usuario.email}>{usuario.nombre}</span>
+          <form method="post" action="/admin/logout">
+            <button type="submit" class="salir">Salir</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-main">
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  .admin-body { background: #f6f3f8; }
+
+  .admin-barra { background: var(--violeta-900); color: #fff; position: sticky; top: 0; z-index: 40; }
+  .admin-barra-int {
+    max-width: 1400px; margin-inline: auto; padding: .8rem 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem;
+  }
+  .admin-marca { display: flex; align-items: center; gap: .6rem; color: #fff; }
+  .admin-marca:hover { text-decoration: none; }
+  .admin-marca strong { display: block; font-size: .88rem; line-height: 1.2; }
+  .admin-marca em { display: block; font-style: normal; font-size: .68rem; color: rgba(255,216,221,.7); }
+
+  .admin-nav { display: flex; gap: 1.25rem; margin-left: 1rem; font-size: .86rem; }
+  .admin-nav a { color: rgba(255,255,255,.72); padding-bottom: 2px; }
+  .admin-nav a:hover { color: #fff; text-decoration: none; }
+  .admin-nav a.activo { color: #fff; font-weight: 600; border-bottom: 2px solid var(--arena); }
+
+  .admin-usuario { margin-left: auto; display: flex; align-items: center; gap: .9rem; font-size: .84rem; }
+  .admin-usuario > span { color: rgba(255,255,255,.85); }
+  .salir {
+    background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px; padding: .35rem .85rem; font: inherit; font-size: .8rem; cursor: pointer;
+  }
+  .salir:hover { background: rgba(255,255,255,.22); }
+
+  .admin-main { max-width: 1400px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+
+  @media (max-width: 780px) {
+    .admin-barra-int { flex-wrap: wrap; gap: .75rem; }
+    .admin-nav { margin-left: 0; order: 3; width: 100%; }
+    .admin-usuario { margin-left: auto; }
+  }
+
+  /* --------- componentes compartidos del panel --------- */
+  .panel {
+    background: #fff; border: 1px solid var(--linea); border-radius: 16px;
+    box-shadow: var(--sombra-sm);
+  }
+
+  .estado {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .25rem .65rem; border-radius: 999px;
+    font-size: .72rem; font-weight: 700; white-space: nowrap;
+  }
+  .estado::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .estado-nuevo           { background: #ede4f5; color: #662d91; }
+  .estado-en_revision     { background: #fff2dd; color: #9a6b1f; }
+  .estado-preseleccionado { background: #dff0e7; color: #1f6a4a; }
+  .estado-descartado      { background: #f0eef1; color: #7a7280; }
+
+  .tipo-nominacion { background: var(--rosa); color: var(--violeta); }
+  .tipo-postulacion { background: #eee9f2; color: #55496b; }
+</style>

@@ -1,0 +1,104 @@
+---
+import Base from '../layouts/Base.astro';
+import Footer from '../components/Footer.astro';
+
+export const prerender = false;
+
+const secciones = [
+  {
+    titulo: '1. Quiénes pueden participar',
+    puntos: [
+      'Personas de entre 18 y 40 años cumplidos al cierre de la convocatoria.',
+      'Que sean titulares, socias o conduzcan una empresa con CUIT radicada en la provincia de San Juan.',
+      'Cuya empresa tenga al menos un (1) año de actividad comprobable al momento del cierre.',
+    ],
+  },
+  {
+    titulo: '2. Cómo se participa',
+    puntos: [
+      'La inscripción es gratuita y se realiza exclusivamente por el formulario de este sitio.',
+      'Cada persona puede presentar una única postulación por edición.',
+      'También se admiten nominaciones de terceros: la persona nominada deberá confirmar y completar su postulación para quedar habilitada.',
+    ],
+  },
+  {
+    titulo: '3. Criterios de evaluación',
+    puntos: [
+      'Trayectoria y crecimiento de la empresa.',
+      'Innovación en el producto, el servicio o el modelo de negocio.',
+      'Generación de empleo y desarrollo del equipo de trabajo.',
+      'Impacto en la comunidad sanjuanina y compromiso con el territorio.',
+      'Sostenibilidad económica y ambiental del proyecto.',
+    ],
+  },
+  {
+    titulo: '4. Proceso de selección',
+    puntos: [
+      'El equipo organizador verifica que cada postulación cumpla los requisitos formales.',
+      'Puede solicitarse documentación complementaria (constancia de CUIT, documentación societaria, material de respaldo).',
+      'Un jurado designado por las entidades organizadoras evalúa las postulaciones admitidas.',
+      'El fallo del jurado es inapelable y se comunica a los seleccionados por email y teléfono.',
+    ],
+  },
+  {
+    titulo: '5. Uso de los datos',
+    puntos: [
+      'Los datos se utilizan únicamente para el proceso de evaluación del premio y para el contacto con quienes se postulan.',
+      'No se ceden ni se comercializan a terceros ajenos a la organización.',
+      'Quien se postula puede solicitar la baja de sus datos escribiendo a la casilla de contacto.',
+    ],
+  },
+];
+---
+
+<Base
+  title="Bases y condiciones · Premio Joven Empresario Sanjuanino"
+  description="Requisitos, criterios de evaluación y proceso de selección del Premio Joven Empresario Sanjuanino."
+>
+  <main class="bases">
+    <div class="contenedor contenedor-angosto">
+      <a href="/" class="volver">← Volver al inicio</a>
+      <h1>Bases y condiciones</h1>
+      <p class="intro">
+        Premio Joven Empresario Sanjuanino · Edición 2026. Organizan CAME Joven, JEFES,
+        la Federación Económica de San Juan y CAME.
+      </p>
+
+      {secciones.map((s) => (
+        <section class="seccion">
+          <h2>{s.titulo}</h2>
+          <ul>{s.puntos.map((p) => <li>{p}</li>)}</ul>
+        </section>
+      ))}
+
+      <p class="nota">
+        Este resumen refleja las condiciones generales de participación. Ante cualquier
+        diferencia, prevalece el reglamento oficial firmado por las entidades organizadoras,
+        que puede solicitarse a
+        <a href="mailto:premio@camejovensanjuan.org">premio@camejovensanjuan.org</a>.
+      </p>
+
+      <a href="/#postulate" class="btn btn-violeta">Ir al formulario de postulación</a>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .bases { padding: 3rem 0 5rem; background: var(--fondo); }
+  .volver { display: inline-block; font-size: .85rem; font-weight: 600; margin-bottom: 1.5rem; }
+  h1 { color: var(--violeta); }
+  .intro { color: var(--tinta-suave); margin-bottom: 2.5rem; }
+
+  .seccion { margin-bottom: 2rem; }
+  .seccion h2 { font-size: 1.1rem; color: var(--tinta); margin-bottom: .75rem; }
+  .seccion ul { margin: 0; padding-left: 1.2rem; color: var(--tinta-suave); font-size: .93rem; }
+  .seccion li { margin-bottom: .5rem; }
+
+  .nota {
+    background: var(--rosa-3); border-left: 4px solid var(--arena);
+    padding: 1rem 1.25rem; border-radius: 0 var(--radio) var(--radio) 0;
+    font-size: .87rem; color: var(--tinta-suave); margin: 2.5rem 0 2rem;
+  }
+</style>

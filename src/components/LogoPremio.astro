@@ -1,0 +1,25 @@
+---
+/** Emblema oficial del premio. `variante` elige la versión según el fondo. */
+interface Props {
+  size?: number;
+  variante?: 'blanco' | 'violeta';
+  class?: string;
+  eager?: boolean;
+}
+
+const { size = 120, variante = 'blanco', class: clase = '', eager = false } = Astro.props;
+
+// El archivo original es 420x466: se mantiene la proporción.
+const alto = Math.round((size * 466) / 420);
+---
+
+<img
+  src={`/logos/emblema-${variante}.png`}
+  width={size}
+  height={alto}
+  class={clase}
+  alt="Premio Joven Empresario Sanjuanino"
+  loading={eager ? 'eager' : 'lazy'}
+  decoding="async"
+  style={`width:${size}px;height:auto`}
+/>

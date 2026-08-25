@@ -1,0 +1,19 @@
+{
+  "name": "premio-joven-empresario-sanjuanino",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "node ./dist/server/entry.mjs",
+    "astro": "astro",
+    "db:seed": "node scripts/seed.mjs",
+    "admin:create": "node scripts/create-admin.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.2.2",
+    "@libsql/client": "^0.15.7",
+    "astro": "^5.12.0"
+  }
+}

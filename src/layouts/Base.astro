@@ -1,0 +1,59 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  noindex?: boolean;
+  precargarHero?: boolean;
+}
+
+const {
+  title = 'Premio Joven Empresario Sanjuanino — Edición 2026',
+  description = 'Postulate al Premio Joven Empresario Sanjuanino 2026. Para emprendedores de 18 a 40 años con empresa en San Juan. Inscripción gratuita. Organizan CAME Joven, JEFES, FESJ y CAME.',
+  noindex = false,
+  precargarHero = false,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="theme-color" content="#250a3a" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={new URL('/logos/lockup-blanco.png', Astro.site ?? Astro.url)} />
+    <meta property="og:locale" content="es_AR" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    {precargarHero && (
+      <link
+        rel="preload"
+        as="image"
+        href="/hongo-1920.jpg"
+        imagesrcset="/hongo-640.jpg 640w, /hongo-1100.jpg 1100w, /hongo-1920.jpg 1920w"
+        imagesizes="100vw"
+      />
+    )}
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

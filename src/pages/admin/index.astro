@@ -1,0 +1,255 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { requireAdmin } from '../../lib/auth';
+import { ESTADOS } from '../../lib/db';
+import { leerFiltros, listar, metricas, actualizar, qs, POR_PAGINA } from '../../lib/consultas';
+import { fechaHora, edad } from '../../lib/fechas';
+
+export const prerender = false;
+
+const sesion = requireAdmin(Astro);
+if (sesion instanceof Response) return sesion;
+
+// Cambio rápido de estado desde el listado (patrón POST → redirect → GET).
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const id = Number(form.get('id'));
+  const estado = String(form.get('estado') ?? '');
+  if (id && ESTADOS.some((e) => e.value === estado)) {
+    await actualizar(id, estado, String(form.get('notas') ?? ''));
+  }
+  return Astro.redirect(`/admin${Astro.url.search}`, 303);
+}
+
+const filtros = leerFiltros(Astro.url);
+const [{ filas, total, paginas }, m] = await Promise.all([listar(filtros), metricas()]);
+const pagina = Math.min(filtros.pagina, paginas);
+const desde = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
+const hasta = Math.min(pagina * POR_PAGINA, total);
+
+const tarjetas = [
+  { etiqueta: 'Total recibidas', valor: m.total, clase: 'kpi-violeta' },
+  { etiqueta: 'Sin revisar', valor: m.nuevo, clase: 'kpi-rosa' },
+  { etiqueta: 'Preseleccionadas', valor: m.preseleccionado, clase: 'kpi-arena' },
+  { etiqueta: 'Últimos 7 días', valor: m.ultimos7, clase: 'kpi-neutro' },
+];
+---
+
+<Admin title="Postulaciones" usuario={sesion} activo="listado">
+  <section class="kpis">
+    {tarjetas.map((t) => (
+      <div class={`kpi ${t.clase}`}>
+        <strong>{t.valor}</strong>
+        <span>{t.etiqueta}</span>
+      </div>
+    ))}
+  </section>
+
+  <section class="panel bloque-filtros">
+    <form method="get" class="filtros">
+      <div class="buscador">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          class="control"
+          type="search"
+          name="q"
+          value={filtros.q}
+          placeholder="Buscar por nombre, empresa, email o CUIT…"
+          aria-label="Buscar"
+        />
+      </div>
+
+      <select class="control select-filtro" name="estado" aria-label="Filtrar por estado">
+        <option value="">Todos los estados</option>
+        {ESTADOS.map((e) => (
+          <option value={e.value} selected={filtros.estado === e.value}>{e.label}</option>
+        ))}
+      </select>
+
+      <select class="control select-filtro" name="tipo" aria-label="Filtrar por tipo">
+        <option value="">Postulaciones y nominaciones</option>
+        <option value="postulacion" selected={filtros.tipo === 'postulacion'}>Solo postulaciones ({m.postulaciones})</option>
+        <option value="nominacion" selected={filtros.tipo === 'nominacion'}>Solo nominaciones ({m.nominaciones})</option>
+      </select>
+
+      <button type="submit" class="btn btn-violeta btn-sm">Filtrar</button>
+      {(filtros.q || filtros.estado || filtros.tipo) && (
+        <a href="/admin" class="btn btn-fantasma btn-sm">Limpiar</a>
+      )}
+      <a href={`/admin/export.csv${qs(filtros, { p: '' })}`} class="btn btn-primario btn-sm exportar">
+        Exportar CSV
+      </a>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="tabla-cabecera">
+      <p>
+        {total === 0
+          ? 'Sin resultados'
+          : `Mostrando ${desde}–${hasta} de ${total} ${total === 1 ? 'registro' : 'registros'}`}
+      </p>
+    </div>
+
+    {filas.length === 0 ? (
+      <div class="vacio">
+        <p><strong>No hay postulaciones que coincidan.</strong></p>
+        <p>Probá quitando filtros, o esperá a que lleguen las primeras inscripciones.</p>
+      </div>
+    ) : (
+      <div class="tabla-scroll">
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Persona</th>
+              <th>Empresa</th>
+              <th>Contacto</th>
+              <th>Tipo</th>
+              <th>Recibida</th>
+              <th>Estado</th>
+              <th><span class="sr-only">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f) => (
+              <tr>
+                <td class="col-id">{f.id}</td>
+                <td>
+                  <a href={`/admin/${f.id}${qs(filtros)}`} class="nombre">{f.nombre} {f.apellido}</a>
+                  <span class="sec">
+                    {edad(f.fecha_nacimiento) !== null ? `${edad(f.fecha_nacimiento)} años` : '—'}
+                    {f.localidad ? ` · ${f.localidad}` : ''}
+                  </span>
+                </td>
+                <td>
+                  <span class="fuerte">{f.empresa}</span>
+                  <span class="sec">{f.rubro ?? '—'}{f.anio_inicio ? ` · desde ${f.anio_inicio}` : ''}</span>
+                </td>
+                <td>
+                  <a href={`mailto:${f.email}`} class="mail">{f.email}</a>
+                  <span class="sec">{f.telefono}</span>
+                </td>
+                <td>
+                  <span class={`estado tipo-${f.tipo}`}>
+                    {f.tipo === 'nominacion' ? 'Nominación' : 'Postulación'}
+                  </span>
+                </td>
+                <td class="sec nowrap">{fechaHora(f.creado_en)}</td>
+                <td>
+                  <form method="post" class="form-estado">
+                    <input type="hidden" name="id" value={f.id} />
+                    <input type="hidden" name="notas" value={f.notas ?? ''} />
+                    <select name="estado" class={`select-estado estado-${f.estado}`} onchange="this.form.submit()" aria-label={`Estado de la postulación ${f.id}`}>
+                      {ESTADOS.map((e) => (
+                        <option value={e.value} selected={f.estado === e.value}>{e.label}</option>
+                      ))}
+                    </select>
+                    <noscript><button type="submit" class="btn btn-sm btn-fantasma">Guardar</button></noscript>
+                  </form>
+                </td>
+                <td class="col-ver">
+                  <a href={`/admin/${f.id}${qs(filtros)}`} class="ver">Ver ficha →</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+
+    {paginas > 1 && (
+      <nav class="paginacion" aria-label="Paginación">
+        <a
+          href={`/admin${qs(filtros, { p: pagina - 1 })}`}
+          class={`pag ${pagina <= 1 ? 'inactiva' : ''}`}
+          aria-disabled={pagina <= 1}
+        >← Anterior</a>
+        <span class="pag-info">Página {pagina} de {paginas}</span>
+        <a
+          href={`/admin${qs(filtros, { p: pagina + 1 })}`}
+          class={`pag ${pagina >= paginas ? 'inactiva' : ''}`}
+          aria-disabled={pagina >= paginas}
+        >Siguiente →</a>
+      </nav>
+    )}
+  </section>
+</Admin>
+
+<style>
+  /* ---------------- KPIs ---------------- */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .kpi {
+    background: #fff; border: 1px solid var(--linea); border-radius: 16px;
+    padding: 1.25rem 1.4rem; box-shadow: var(--sombra-sm);
+    border-left: 5px solid var(--linea);
+  }
+  .kpi strong { display: block; font-size: 2rem; font-weight: 800; line-height: 1; color: var(--tinta); }
+  .kpi span { display: block; font-size: .76rem; color: var(--tinta-suave); margin-top: .35rem; font-weight: 500; }
+  .kpi-violeta { border-left-color: var(--violeta); }
+  .kpi-rosa    { border-left-color: #e59aa8; }
+  .kpi-arena   { border-left-color: var(--arena); }
+  .kpi-neutro  { border-left-color: #b9b0c2; }
+  @media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ---------------- filtros ---------------- */
+  .bloque-filtros { padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  .filtros { display: flex; gap: .65rem; align-items: center; flex-wrap: wrap; }
+  .buscador { position: relative; flex: 1 1 280px; min-width: 220px; }
+  .buscador svg { position: absolute; left: .8rem; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--tinta-suave); pointer-events: none; }
+  .buscador .control { padding-left: 2.4rem; padding-block: .6rem; }
+  .select-filtro { width: auto; min-width: 190px; padding-block: .6rem; font-size: .88rem; }
+  .exportar { margin-left: auto; }
+  @media (max-width: 780px) { .exportar { margin-left: 0; } }
+
+  /* ---------------- tabla ---------------- */
+  .tabla-cabecera { padding: 1rem 1.25rem; border-bottom: 1px solid var(--linea); }
+  .tabla-cabecera p { margin: 0; font-size: .82rem; color: var(--tinta-suave); font-weight: 500; }
+
+  .tabla-scroll { overflow-x: auto; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .tabla th {
+    text-align: left; padding: .7rem 1rem;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--tinta-suave); background: #faf8fb;
+    border-bottom: 1px solid var(--linea); white-space: nowrap;
+  }
+  .tabla td { padding: .8rem 1rem; border-bottom: 1px solid #f1edf3; vertical-align: middle; }
+  .tabla tbody tr:hover { background: #fcfaFd; }
+  .tabla tbody tr:last-child td { border-bottom: 0; }
+
+  .col-id { color: var(--tinta-suave); font-variant-numeric: tabular-nums; font-size: .8rem; }
+  .nombre { display: block; font-weight: 600; color: var(--violeta); }
+  .fuerte { display: block; font-weight: 600; color: var(--tinta); }
+  .mail { display: block; font-size: .82rem; }
+  .sec { display: block; font-size: .76rem; color: var(--tinta-suave); }
+  .nowrap { white-space: nowrap; }
+  .col-ver { text-align: right; }
+  .ver { font-size: .8rem; font-weight: 600; white-space: nowrap; }
+
+  .form-estado { display: flex; gap: .4rem; align-items: center; }
+  .select-estado {
+    font: inherit; font-size: .76rem; font-weight: 700;
+    border: 1px solid var(--linea); border-radius: 999px;
+    padding: .3rem 1.6rem .3rem .7rem; cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 12 8'%3E%3Cpath fill='%23555' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right .6rem center;
+  }
+  .select-estado:focus { outline: 2px solid var(--violeta); outline-offset: 1px; }
+
+  .vacio { padding: 3.5rem 1.5rem; text-align: center; color: var(--tinta-suave); }
+  .vacio p { margin: 0 0 .4rem; font-size: .9rem; }
+  .vacio strong { color: var(--tinta); }
+
+  /* ---------------- paginación ---------------- */
+  .paginacion {
+    display: flex; align-items: center; justify-content: center; gap: 1.25rem;
+    padding: 1rem; border-top: 1px solid var(--linea);
+  }
+  .pag { font-size: .84rem; font-weight: 600; }
+  .pag.inactiva { color: #bdb4c6; pointer-events: none; }
+  .pag-info { font-size: .8rem; color: var(--tinta-suave); }
+</style>

@@ -1,0 +1,229 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { requireAdmin } from '../../lib/auth';
+import { ESTADOS } from '../../lib/db';
+import { obtener, actualizar, eliminar } from '../../lib/consultas';
+import { fechaHora, fechaNacimiento, edad } from '../../lib/fechas';
+import { formatearCuit } from '../../lib/validacion';
+
+export const prerender = false;
+
+const sesion = requireAdmin(Astro);
+if (sesion instanceof Response) return sesion;
+
+const id = Number(Astro.params.id);
+if (!Number.isInteger(id) || id <= 0) {
+  return new Response('No encontrado', { status: 404 });
+}
+
+// Conserva los filtros del listado para el enlace "volver".
+const volver = `/admin${Astro.url.search}`;
+let guardado = false;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+
+  if (form.get('accion') === 'eliminar') {
+    await eliminar(id);
+    return Astro.redirect(volver, 303);
+  }
+
+  const estado = String(form.get('estado') ?? '');
+  if (ESTADOS.some((e) => e.value === estado)) {
+    await actualizar(id, estado, String(form.get('notas') ?? '').trim());
+  }
+  const url = new URL(Astro.url);
+  url.searchParams.set('ok', '1');
+  return Astro.redirect(url.pathname + url.search, 303);
+}
+
+guardado = Astro.url.searchParams.get('ok') === '1';
+
+const p = await obtener(id);
+if (!p) {
+  return new Response('No encontrado', { status: 404 });
+}
+
+const anios = p.anio_inicio ? new Date().getFullYear() - p.anio_inicio : null;
+const edadActual = edad(p.fecha_nacimiento);
+
+const webUrl = p.web
+  ? p.web.startsWith('http')
+    ? p.web
+    : `https://${p.web.replace(/^\/+/, '')}`
+  : null;
+
+const datosEmpresa = [
+  { etiqueta: 'Empresa', valor: p.empresa },
+  { etiqueta: 'CUIT', valor: p.cuit ? formatearCuit(p.cuit) : '—' },
+  { etiqueta: 'Rubro', valor: p.rubro ?? '—' },
+  { etiqueta: 'Departamento', valor: p.localidad ?? '—' },
+  { etiqueta: 'Inicio de actividades', valor: p.anio_inicio ? `${p.anio_inicio} (${anios} ${anios === 1 ? 'año' : 'años'})` : '—' },
+  { etiqueta: 'Empleados', valor: p.empleados ?? '—' },
+];
+
+const datosPersona = [
+  { etiqueta: 'Nombre completo', valor: `${p.nombre} ${p.apellido}` },
+  { etiqueta: 'Fecha de nacimiento', valor: `${fechaNacimiento(p.fecha_nacimiento)}${edadActual !== null ? ` · ${edadActual} años` : ''}` },
+];
+---
+
+<Admin title={`${p.nombre} ${p.apellido}`} usuario={sesion} activo="detalle">
+  <a href={volver} class="volver">← Volver al listado</a>
+
+  {guardado && <div class="ok" role="status">Cambios guardados.</div>}
+
+  <header class="cabecera panel">
+    <div>
+      <div class="etiquetas">
+        <span class={`estado tipo-${p.tipo}`}>{p.tipo === 'nominacion' ? 'Nominación' : 'Postulación'}</span>
+        <span class={`estado estado-${p.estado}`}>{ESTADOS.find((e) => e.value === p.estado)?.label ?? p.estado}</span>
+        <span class="registro">#{p.id} · recibida el {fechaHora(p.creado_en)}</span>
+      </div>
+      <h1>{p.nombre} {p.apellido}</h1>
+      <p class="empresa">{p.empresa}</p>
+    </div>
+    <div class="contacto-rapido">
+      <a href={`mailto:${p.email}`} class="btn btn-violeta btn-sm">Escribir email</a>
+      <a href={`https://wa.me/${p.telefono.replace(/\D/g, '')}`} target="_blank" rel="noopener" class="btn btn-fantasma btn-sm">WhatsApp</a>
+    </div>
+  </header>
+
+  <div class="columnas">
+    <div class="col-principal">
+      {p.tipo === 'nominacion' && (
+        <section class="panel bloque">
+          <h2>Quién la nominó</h2>
+          <dl class="datos">
+            <div><dt>Nombre</dt><dd>{p.nominador_nombre ?? '—'}</dd></div>
+            <div><dt>Email</dt><dd>{p.nominador_email ? <a href={`mailto:${p.nominador_email}`}>{p.nominador_email}</a> : '—'}</dd></div>
+            <div><dt>Teléfono</dt><dd>{p.nominador_tel ?? '—'}</dd></div>
+          </dl>
+        </section>
+      )}
+
+      <section class="panel bloque">
+        <h2>Datos personales</h2>
+        <dl class="datos">
+          {datosPersona.map((d) => (
+            <div><dt>{d.etiqueta}</dt><dd>{d.valor}</dd></div>
+          ))}
+          <div><dt>Email</dt><dd><a href={`mailto:${p.email}`}>{p.email}</a></dd></div>
+          <div><dt>Teléfono</dt><dd>{p.telefono}</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel bloque">
+        <h2>La empresa</h2>
+        <dl class="datos">
+          {datosEmpresa.map((d) => (
+            <div><dt>{d.etiqueta}</dt><dd>{d.valor}</dd></div>
+          ))}
+          <div>
+            <dt>Web / redes</dt>
+            <dd>{webUrl ? <a href={webUrl} target="_blank" rel="noopener nofollow">{p.web}</a> : '—'}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel bloque">
+        <h2>{p.tipo === 'nominacion' ? 'Por qué merece el premio' : 'La historia'}</h2>
+        <p class="historia">{p.historia}</p>
+      </section>
+    </div>
+
+    <aside class="col-lateral">
+      <section class="panel bloque">
+        <h2>Gestión</h2>
+        <form method="post" class="form-gestion">
+          <div class="campo">
+            <label for="estado">Estado</label>
+            <select class="control" id="estado" name="estado">
+              {ESTADOS.map((e) => (
+                <option value={e.value} selected={p.estado === e.value}>{e.label}</option>
+              ))}
+            </select>
+          </div>
+          <div class="campo">
+            <label for="notas">Notas internas</label>
+            <textarea class="control notas" id="notas" name="notas" placeholder="Observaciones del jurado, documentación pendiente, resultado de la llamada…">{p.notas ?? ''}</textarea>
+            <p class="ayuda">Solo visibles en este panel.</p>
+          </div>
+          <button type="submit" class="btn btn-violeta ancho">Guardar cambios</button>
+        </form>
+      </section>
+
+      <section class="panel bloque">
+        <h2>Trazabilidad</h2>
+        <dl class="datos compacta">
+          <div><dt>Recibida</dt><dd>{fechaHora(p.creado_en)}</dd></div>
+          <div><dt>IP de origen</dt><dd class="mono">{p.ip ?? '—'}</dd></div>
+          <div><dt>Navegador</dt><dd class="mono chico">{p.user_agent ?? '—'}</dd></div>
+        </dl>
+      </section>
+
+      <section class="panel bloque zona-riesgo">
+        <h2>Eliminar</h2>
+        <p class="ayuda">Se borra el registro de forma permanente. No se puede deshacer.</p>
+        <form method="post" onsubmit="return confirm('¿Eliminar definitivamente esta postulación? Esta acción no se puede deshacer.')">
+          <input type="hidden" name="accion" value="eliminar" />
+          <button type="submit" class="btn btn-sm eliminar">Eliminar postulación</button>
+        </form>
+      </section>
+    </aside>
+  </div>
+</Admin>
+
+<style>
+  .volver { display: inline-block; font-size: .84rem; font-weight: 600; margin-bottom: 1rem; }
+
+  .ok {
+    background: #dff0e7; color: #1f6a4a; border: 1px solid #b9ddcb;
+    border-radius: 10px; padding: .7rem 1rem; font-size: .85rem; font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  .cabecera {
+    padding: 1.5rem 1.75rem;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem;
+    margin-bottom: 1.25rem; flex-wrap: wrap;
+  }
+  .etiquetas { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; margin-bottom: .75rem; }
+  .registro { font-size: .76rem; color: var(--tinta-suave); }
+  .cabecera h1 { font-size: 1.6rem; margin-bottom: .2rem; color: var(--tinta); }
+  .empresa { margin: 0; color: var(--violeta); font-weight: 600; font-size: .95rem; }
+  .contacto-rapido { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .columnas { display: grid; grid-template-columns: 1fr 340px; gap: 1.25rem; align-items: start; }
+  @media (max-width: 1000px) { .columnas { grid-template-columns: 1fr; } }
+
+  .col-principal, .col-lateral { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .bloque { padding: 1.4rem 1.6rem; }
+  .bloque h2 {
+    font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--violeta); margin-bottom: 1rem;
+  }
+
+  .datos { margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem 1.5rem; }
+  .datos.compacta { grid-template-columns: 1fr; gap: .8rem; }
+  .datos dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta-suave); margin-bottom: .2rem; }
+  .datos dd { margin: 0; font-size: .92rem; font-weight: 500; color: var(--tinta); word-break: break-word; }
+  .mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: .78rem !important; font-weight: 400 !important; color: var(--tinta-suave) !important; }
+  .chico { font-size: .7rem !important; line-height: 1.4; }
+  @media (max-width: 620px) { .datos { grid-template-columns: 1fr; } }
+
+  .historia { white-space: pre-wrap; font-size: .93rem; line-height: 1.75; color: var(--tinta); margin: 0; }
+
+  .form-gestion .ancho { width: 100%; }
+  .notas { min-height: 150px; font-size: .88rem; }
+
+  .zona-riesgo { border-color: #f0d6d1; }
+  .zona-riesgo h2 { color: var(--alerta); }
+  .zona-riesgo .ayuda { font-size: .78rem; color: var(--tinta-suave); margin-bottom: .9rem; }
+  .eliminar {
+    background: #fff; color: var(--alerta); border: 1.5px solid #edc4bd;
+    border-radius: 999px; padding: .45rem 1.1rem; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+  }
+  .eliminar:hover { background: #fdeceb; }
+</style>

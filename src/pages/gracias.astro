@@ -1,0 +1,82 @@
+---
+import Base from '../layouts/Base.astro';
+import LogoPremio from '../components/LogoPremio.astro';
+import Footer from '../components/Footer.astro';
+
+export const prerender = false;
+
+const esNominacion = Astro.url.searchParams.get('tipo') === 'nominacion';
+const duplicada = Astro.url.searchParams.get('dup') === '1';
+---
+
+<Base title="¡Listo! · Premio Joven Empresario Sanjuanino" noindex>
+  <main class="gracias">
+    <div class="contenedor contenedor-angosto">
+      <div class="tarjeta caja">
+        <LogoPremio size={96} variante="violeta" class="emblema-gracias" />
+
+        <h1>{esNominacion ? '¡Gracias por la nominación!' : '¡Recibimos tu postulación!'}</h1>
+
+        {duplicada ? (
+          <p class="texto">
+            Ya teníamos registrado este envío, así que no lo duplicamos. Está todo en orden:
+            no hace falta que lo mandes otra vez.
+          </p>
+        ) : esNominacion ? (
+          <p class="texto">
+            Nos vamos a poner en contacto con la persona que nominaste para invitarla a completar
+            su postulación. Gracias por hacer visible el trabajo de otro sanjuanino.
+          </p>
+        ) : (
+          <p class="texto">
+            Ya está cargada en el sistema. El equipo organizador la va a revisar y te va a escribir
+            al email que indicaste si necesita documentación adicional.
+          </p>
+        )}
+
+        <ul class="proximos">
+          <li><strong>1.</strong> Revisión de la postulación por el equipo organizador.</li>
+          <li><strong>2.</strong> Contacto por email o teléfono si falta algún dato.</li>
+          <li><strong>3.</strong> Evaluación del jurado y anuncio de los seleccionados.</li>
+        </ul>
+
+        <div class="acciones">
+          <a href="/" class="btn btn-violeta">Volver al inicio</a>
+          <a href="/?tipo=nominacion#postulate" class="btn btn-fantasma">Nominar a alguien más</a>
+        </div>
+
+        <p class="consulta">
+          ¿Dudas? Escribinos a <a href="mailto:premio@camejovensanjuan.org">premio@camejovensanjuan.org</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Base>
+
+<style>
+  .gracias {
+    min-height: 78vh;
+    display: flex; align-items: center;
+    padding: 4rem 0;
+    background: linear-gradient(170deg, var(--rosa) 0%, var(--rosa-3) 45%, var(--fondo) 100%);
+  }
+  .caja { padding: 3rem 2.5rem; text-align: center; }
+  @media (max-width: 640px) { .caja { padding: 2rem 1.4rem; } }
+
+  .caja :global(.emblema-gracias) { margin: 0 auto 1.5rem; }
+  .caja h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); color: var(--violeta); }
+  .texto { color: var(--tinta-suave); max-width: 48ch; margin-inline: auto; }
+
+  .proximos {
+    list-style: none; margin: 2rem auto; padding: 1.4rem 1.5rem; max-width: 470px;
+    background: var(--rosa-3); border-radius: var(--radio);
+    text-align: left; font-size: .89rem; color: var(--tinta-suave);
+  }
+  .proximos li + li { margin-top: .6rem; }
+  .proximos strong { color: var(--violeta); margin-right: .3rem; }
+
+  .acciones { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+  .consulta { margin: 1.75rem 0 0; font-size: .85rem; color: var(--tinta-suave); }
+</style>
