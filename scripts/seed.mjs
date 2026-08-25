@@ -4,14 +4,15 @@
  *   npm run db:seed
  * No borra nada: solo agrega registros con emails de prueba (@ejemplo.test).
  */
-import { createClient } from '@libsql/client';
-
 try { process.loadEnvFile('.env'); } catch { /* opcional */ }
 
-const client = createClient({
-  url: process.env.DATABASE_URL ?? 'file:./data/premio.db',
-  authToken: process.env.DATABASE_AUTH_TOKEN,
-});
+const url = (process.env.DATABASE_URL ?? '').trim() || 'file:./data/premio.db';
+const authToken = process.env.DATABASE_AUTH_TOKEN;
+const { createClient } = url.startsWith('file:')
+  ? await import('@libsql/client')
+  : await import('@libsql/client/web');
+
+const client = createClient({ url, authToken });
 
 await client.execute(`
   CREATE TABLE IF NOT EXISTS postulaciones (

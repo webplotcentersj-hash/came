@@ -1,4 +1,34 @@
 const TZ = 'America/Argentina/Buenos_Aires';
+const CIERRE_DEFAULT = '2026-09-30T23:59:00-03:00';
+
+/** Fecha de cierre de la convocatoria. Nunca tira: un valor vacío o inválido usa el default. */
+export function parseFechaCierre(valor: string | undefined): Date {
+  const d = new Date(valor || CIERRE_DEFAULT);
+  return Number.isNaN(d.getTime()) ? new Date(CIERRE_DEFAULT) : d;
+}
+
+export function formatearCierre(d: Date): { texto: string; hora: string; iso: string } {
+  try {
+    const fecha = d.toLocaleDateString('es-AR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      timeZone: TZ,
+    });
+    return {
+      texto: fecha.charAt(0).toUpperCase() + fecha.slice(1),
+      hora: d.toLocaleTimeString('es-AR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: TZ,
+      }),
+      iso: d.toISOString(),
+    };
+  } catch {
+    return { texto: '30 de septiembre de 2026', hora: '23:59', iso: d.toISOString() };
+  }
+}
 
 /** SQLite guarda `datetime('now')` en UTC sin sufijo: hay que marcarlo antes de parsear. */
 export function desdeSqlite(valor: string | null | undefined): Date | null {

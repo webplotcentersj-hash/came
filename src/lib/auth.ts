@@ -1,14 +1,13 @@
 import crypto from 'node:crypto';
 import type { APIContext, AstroCookies } from 'astro';
 import { db } from './db';
+import { env } from './env';
 
 const COOKIE = 'pjes_session';
 const MAX_AGE = 60 * 60 * 8; // 8 horas
 
 function secret(): string {
-  // process.env primero: en Vercel se lee en tiempo de ejecución, así el
-  // secreto no queda incrustado en el bundle al compilar.
-  const s = process.env.SESSION_SECRET ?? import.meta.env.SESSION_SECRET;
+  const s = env('SESSION_SECRET');
   if (!s || s.length < 16) {
     throw new Error(
       'SESSION_SECRET no configurado (mínimo 16 caracteres). Definilo en .env ' +
@@ -73,11 +72,11 @@ export function getSession(cookies: AstroCookies): SessionData | null {
   if (!raw) return null;
   const [payload, sig] = raw.split('.');
   if (!payload || !sig) return null;
-  const expected = sign(payload);
-  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-    return null;
-  }
   try {
+    const expected = sign(payload);
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return null;
+    }
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString()) as SessionData;
     return data.exp > Date.now() ? data : null;
   } catch {

@@ -3,21 +3,14 @@ import Base from '../layouts/Base.astro';
 import LogoPremio from '../components/LogoPremio.astro';
 import Formulario from '../components/Formulario.astro';
 import Footer from '../components/Footer.astro';
+import { env } from '../lib/env';
+import { formatearCierre, parseFechaCierre } from '../lib/fechas';
 
-export const prerender = false;
+// HTML estático: la home no toca la base y así no depende del runtime serverless.
+export const prerender = true;
 
-// process.env primero: permite cambiar la fecha en Vercel sin recompilar.
-const fechaCierre =
-  process.env.PUBLIC_FECHA_CIERRE ?? import.meta.env.PUBLIC_FECHA_CIERRE ?? '2026-09-30T23:59:00-03:00';
-const cierre = new Date(fechaCierre);
-const fecha = cierre.toLocaleDateString('es-AR', {
-  weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires',
-});
-// Mayúscula solo en la inicial: "Miércoles, 30 de septiembre".
-const cierreTexto = fecha.charAt(0).toUpperCase() + fecha.slice(1);
-const cierreHora = cierre.toLocaleTimeString('es-AR', {
-  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Argentina/Buenos_Aires',
-});
+const cierre = parseFechaCierre(env('PUBLIC_FECHA_CIERRE'));
+const { texto: cierreTexto, hora: cierreHora, iso: cierreIso } = formatearCierre(cierre);
 
 const requisitos = [
   {
@@ -196,7 +189,7 @@ const ticker = [
         <a href="#postulate" class="btn btn-contorno btn-lg" data-abrir-tipo="nominacion">Nominá a alguien</a>
       </div>
 
-      <div class="cuenta vidrio" id="cuenta" data-cierre={cierre.toISOString()}>
+      <div class="cuenta vidrio" id="cuenta" data-cierre={cierreIso}>
         <p class="cuenta-titulo">La convocatoria cierra en</p>
         <div class="cuenta-grid">
           <div><strong data-u="d">--</strong><span>días</span></div>

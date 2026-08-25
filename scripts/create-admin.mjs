@@ -8,14 +8,15 @@
 import crypto from 'node:crypto';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-import { createClient } from '@libsql/client';
-
 try { process.loadEnvFile('.env'); } catch { /* sin .env: se usan los valores por defecto */ }
 
-const client = createClient({
-  url: process.env.DATABASE_URL ?? 'file:./data/premio.db',
-  authToken: process.env.DATABASE_AUTH_TOKEN,
-});
+const url = (process.env.DATABASE_URL ?? '').trim() || 'file:./data/premio.db';
+const authToken = process.env.DATABASE_AUTH_TOKEN;
+const { createClient } = url.startsWith('file:')
+  ? await import('@libsql/client')
+  : await import('@libsql/client/web');
+
+const client = createClient({ url, authToken });
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);

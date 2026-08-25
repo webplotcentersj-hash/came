@@ -11,23 +11,38 @@ if (getSession(Astro.cookies)) {
 }
 
 const destino = Astro.url.searchParams.get('next') || '/admin';
-const sinAdmins = (await countAdmins()) === 0;
 
 let error = '';
 let email = '';
+let sinAdmins = false;
+let errorBase = '';
 
-if (Astro.request.method === 'POST') {
+try {
+  sinAdmins = (await countAdmins()) === 0;
+} catch (err) {
+  console.error('[admin/login] no se pudo abrir la base:', err);
+  errorBase =
+    'No hay conexión con la base de datos. En Vercel hay que configurar DATABASE_URL y DATABASE_AUTH_TOKEN (Turso) y SESSION_SECRET.';
+}
+
+if (!errorBase && Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   email = String(form.get('email') ?? '').trim();
   const password = String(form.get('password') ?? '');
 
-  const admin = email ? await findAdminByEmail(email) : undefined;
+  try {
+    const admin = email ? await findAdminByEmail(email) : undefined;
 
-  if (admin && verifyPassword(password, admin.password_hash)) {
-    createSession(Astro.cookies, admin);
-    return Astro.redirect(destino.startsWith('/admin') ? destino : '/admin');
+    if (admin && verifyPassword(password, admin.password_hash)) {
+      createSession(Astro.cookies, admin);
+      return Astro.redirect(destino.startsWith('/admin') ? destino : '/admin');
+    }
+    error = 'Email o contraseña incorrectos.';
+  } catch (err) {
+    console.error('[admin/login] error al ingresar:', err);
+    errorBase =
+      'No hay conexión con la base de datos. En Vercel hay que configurar DATABASE_URL y DATABASE_AUTH_TOKEN (Turso) y SESSION_SECRET.';
   }
-  error = 'Email o contraseña incorrectos.';
 }
 ---
 
@@ -50,10 +65,12 @@ if (Astro.request.method === 'POST') {
         <h1>Panel de postulaciones</h1>
         <p class="sub">Premio Joven Empresario Sanjuanino</p>
 
+        {errorBase && <div class="error-box" role="alert">{errorBase}</div>}
+
         {sinAdmins && (
           <div class="aviso">
-            Todavía no hay ningún usuario creado. Ejecutá <code>npm run admin:create</code> en el
-            servidor para dar de alta el primero.
+            Todavía no hay ningún usuario creado. Ejecutá <code>npm run admin:create</code> apuntando
+            a la base de producción para dar de alta el primero.
           </div>
         )}
 

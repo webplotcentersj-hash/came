@@ -5,8 +5,6 @@ import vercel from '@astrojs/vercel';
 export default defineConfig({
   output: 'server',
   adapter: vercel({
-    // Sirve las imágenes de public/ optimizadas por Vercel.
-    imageService: true,
     webAnalytics: { enabled: false },
   }),
   server: { port: 4325, host: true },

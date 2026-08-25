@@ -1,18 +1,11 @@
 import type { Client } from '@libsql/client';
+import { env } from './env';
 
-/**
- * En el servidor, `process.env` es la fuente confiable en tiempo de ejecución
- * (así un cambio de variable en Vercel no exige recompilar). `import.meta.env`
- * queda como respaldo para `astro dev`, que carga el .env solo ahí.
- */
-function variable(nombre: string): string | undefined {
-  return process.env[nombre] ?? (import.meta.env as Record<string, string | undefined>)[nombre];
-}
+const url = env('DATABASE_URL') ?? 'file:./data/premio.db';
+const authToken = env('DATABASE_AUTH_TOKEN');
+const enVercel = Boolean(process.env.VERCEL);
 
-const url = variable('DATABASE_URL') ?? 'file:./data/premio.db';
-const authToken = variable('DATABASE_AUTH_TOKEN');
-
-/** Turso y cualquier base remota; solo `file:` usa el cliente con binario nativo. */
+/** Turso y cualquier base remota; el binario nativo solo corre en local con `file:`. */
 const esRemota = !url.startsWith('file:');
 
 let client: Client | null = null;
@@ -58,11 +51,17 @@ const SCHEMA = [
 ];
 
 async function crearCliente(): Promise<Client> {
-  // El entrypoint `/web` es HTTP puro: es el que corresponde en serverless,
-  // donde no conviene arrastrar el binario nativo de libSQL.
-  const { createClient } = esRemota
-    ? await import('@libsql/client/web')
-    : await import('@libsql/client');
+  if (!esRemota) {
+    if (enVercel) {
+      throw new Error(
+        'En Vercel la base en archivo no persiste. Definí DATABASE_URL (libsql://…) y DATABASE_AUTH_TOKEN de Turso.',
+      );
+    }
+    const { createClient } = await import('@libsql/client');
+    return createClient({ url, authToken });
+  }
+  // HTTP puro: es el que corresponde en serverless, sin binario nativo.
+  const { createClient } = await import('@libsql/client/web');
   return createClient({ url, authToken });
 }
 
