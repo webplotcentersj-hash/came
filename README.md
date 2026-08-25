@@ -2,8 +2,8 @@
 
 Landing de la convocatoria + base de datos de postulaciones + panel de administración.
 
-- **Framework:** Astro 5 en modo `server` (SSR) con adaptador Node standalone
-- **Base de datos:** SQLite vía `@libsql/client` (archivo local; en producción puede apuntarse a Turso sin cambiar código)
+- **Framework:** Astro 5 en modo `server` (SSR), adaptador `@astrojs/vercel`
+- **Base de datos:** SQLite vía `@libsql/client` — archivo local en desarrollo, [Turso](https://turso.tech) en producción, sin cambiar código
 - **Sin dependencias de UI:** CSS propio, cero frameworks de estilos
 
 **Paleta:** rosa `#ffd8dd` · violeta `#662d91` · arena `#c7b299`
@@ -136,26 +136,107 @@ Todo `/admin/*` está detrás de `requireAdmin()` y marcado `noindex`.
 
 ---
 
-## Producción
+## Deploy en Vercel
+
+El proyecto ya usa el adaptador `@astrojs/vercel`. Vercel detecta Astro solo: no hace falta
+tocar el comando de build ni el directorio de salida.
+
+### 1. Base de datos en Turso
+
+**Vercel no persiste el sistema de archivos**: la base en archivo se borraría en cada
+invocación. En producción hay que usar [Turso](https://turso.tech), que es el mismo SQLite
+por HTTP y tiene plan gratuito.
 
 ```bash
-npm run build
-npm run preview     # node ./dist/server/entry.mjs
+curl -sSfL https://get.tur.so/install.sh | bash
 ```
 
-El servidor escucha en `HOST`/`PORT` (por defecto `4321`). Variables necesarias:
+```bash
+turso auth signup
+```
 
-| Variable | Para qué |
+```bash
+turso db create premio-joven-empresario --location gru
+```
+
+```bash
+turso db show premio-joven-empresario --url
+```
+
+```bash
+turso db tokens create premio-joven-empresario
+```
+
+Guardá la URL (`libsql://…`) y el token. **El esquema se crea solo** la primera vez que la
+app toca la base: no hay migraciones que correr.
+
+### 2. Variables de entorno en Vercel
+
+En *Project → Settings → Environment Variables*, para **Production** y **Preview**:
+
+| Variable | Valor |
 |---|---|
-| `SESSION_SECRET` | Firma de la cookie de sesión. Obligatoria, larga y aleatoria. |
-| `DATABASE_URL` | `file:./data/premio.db` local, o `libsql://…turso.io` en la nube. |
-| `DATABASE_AUTH_TOKEN` | Solo si `DATABASE_URL` es remota. |
-| `PUBLIC_FECHA_CIERRE` | Fecha ISO del cierre; alimenta la cuenta regresiva del hero. |
+| `DATABASE_URL` | `libsql://premio-joven-empresario-tuusuario.turso.io` |
+| `DATABASE_AUTH_TOKEN` | El token de Turso |
+| `SESSION_SECRET` | Cadena aleatoria larga — **distinta** de la de desarrollo |
+| `PUBLIC_FECHA_CIERRE` | `2026-09-30T23:59:00-03:00` |
 
-Con SQLite local hay que **persistir el volumen `data/`** entre despliegues. Si el hosting
-no lo permite (Vercel, Netlify y similares), creá una base en [Turso](https://turso.tech),
-apuntá `DATABASE_URL` y `DATABASE_AUTH_TOKEN` ahí y cambiá el adaptador de Astro por el
-del proveedor: el resto del código no se toca.
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Las cuatro se leen de `process.env` **en tiempo de ejecución**, así que cambiar la fecha de
+cierre o rotar el secreto no exige recompilar: alcanza con reiniciar el deploy.
+
+### 3. Conectar el repo
+
+Importá `webplotcentersj-hash/came` desde el dashboard de Vercel, o desde la terminal:
+
+```bash
+vercel --prod
+```
+
+### 4. Crear el primer usuario del panel
+
+Apuntando a la base de producción. Ojo: esto escribe en la base real.
+
+En PowerShell (Windows):
+
+```bash
+$env:DATABASE_URL="libsql://..."; $env:DATABASE_AUTH_TOKEN="ey..."; npm run admin:create
+```
+
+En bash / macOS / Linux:
+
+```bash
+DATABASE_URL="libsql://..." DATABASE_AUTH_TOKEN="ey..." npm run admin:create
+```
+
+Las variables de la terminal tienen prioridad sobre el `.env` local, así que el comando
+apunta a Turso aunque tengas la base en archivo configurada para desarrollo.
+
+### Probar el entorno de Vercel en local
+
+```bash
+npm run vercel:dev
+```
+
+Requiere `vercel link` una vez. Para el día a día alcanza con `npm run dev`.
+
+---
+
+## Volver a un servidor propio
+
+Si en algún momento conviene autohospedarlo en lugar de Vercel:
+
+```bash
+npm i @astrojs/node && npm rm @astrojs/vercel
+```
+
+Cambiá el adaptador en `astro.config.mjs` por `node({ mode: 'standalone' })` y ya podés
+volver a `DATABASE_URL="file:./data/premio.db"`, persistiendo el directorio `data/` entre
+despliegues. El resto del código no se toca: `src/lib/db.ts` elige el cliente de libSQL
+según si la URL es un archivo o una base remota.
 
 ---
 

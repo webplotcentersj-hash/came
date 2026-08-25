@@ -6,7 +6,9 @@ import Footer from '../components/Footer.astro';
 
 export const prerender = false;
 
-const fechaCierre = import.meta.env.PUBLIC_FECHA_CIERRE ?? '2026-09-30T23:59:00-03:00';
+// process.env primero: permite cambiar la fecha en Vercel sin recompilar.
+const fechaCierre =
+  process.env.PUBLIC_FECHA_CIERRE ?? import.meta.env.PUBLIC_FECHA_CIERRE ?? '2026-09-30T23:59:00-03:00';
 const cierre = new Date(fechaCierre);
 const fecha = cierre.toLocaleDateString('es-AR', {
   weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires',

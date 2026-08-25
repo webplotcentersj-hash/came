@@ -1,7 +1,19 @@
-import { createClient, type Client } from '@libsql/client';
+import type { Client } from '@libsql/client';
 
-const url = import.meta.env.DATABASE_URL ?? process.env.DATABASE_URL ?? 'file:./data/premio.db';
-const authToken = import.meta.env.DATABASE_AUTH_TOKEN ?? process.env.DATABASE_AUTH_TOKEN;
+/**
+ * En el servidor, `process.env` es la fuente confiable en tiempo de ejecución
+ * (así un cambio de variable en Vercel no exige recompilar). `import.meta.env`
+ * queda como respaldo para `astro dev`, que carga el .env solo ahí.
+ */
+function variable(nombre: string): string | undefined {
+  return process.env[nombre] ?? (import.meta.env as Record<string, string | undefined>)[nombre];
+}
+
+const url = variable('DATABASE_URL') ?? 'file:./data/premio.db';
+const authToken = variable('DATABASE_AUTH_TOKEN');
+
+/** Turso y cualquier base remota; solo `file:` usa el cliente con binario nativo. */
+const esRemota = !url.startsWith('file:');
 
 let client: Client | null = null;
 let ready: Promise<void> | null = null;
@@ -45,16 +57,31 @@ const SCHEMA = [
    )`,
 ];
 
+async function crearCliente(): Promise<Client> {
+  // El entrypoint `/web` es HTTP puro: es el que corresponde en serverless,
+  // donde no conviene arrastrar el binario nativo de libSQL.
+  const { createClient } = esRemota
+    ? await import('@libsql/client/web')
+    : await import('@libsql/client');
+  return createClient({ url, authToken });
+}
+
 /** Cliente libSQL con el esquema garantizado (una sola vez por proceso). */
 export async function db(): Promise<Client> {
-  if (!client) client = createClient({ url, authToken });
   if (!ready) {
     ready = (async () => {
-      for (const stmt of SCHEMA) await client!.execute(stmt);
-    })();
+      client = await crearCliente();
+      // En un solo viaje: en serverless cada arranque en frío pagaría el costo.
+      await client.batch(SCHEMA, 'write');
+    })().catch((err) => {
+      // Un fallo no debe dejar cacheada una promesa rechazada para siempre.
+      ready = null;
+      client = null;
+      throw err;
+    });
   }
   await ready;
-  return client;
+  return client!;
 }
 
 export type Estado = 'nuevo' | 'en_revision' | 'preseleccionado' | 'descartado';

@@ -6,14 +6,17 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "node ./dist/server/entry.mjs",
+    "vercel:dev": "vercel dev --listen 4325",
     "astro": "astro",
     "db:seed": "node scripts/seed.mjs",
     "admin:create": "node scripts/create-admin.mjs"
   },
   "dependencies": {
-    "@astrojs/node": "^9.2.2",
+    "@astrojs/vercel": "^9.0.5",
     "@libsql/client": "^0.15.7",
     "astro": "^5.12.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

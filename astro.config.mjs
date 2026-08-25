@@ -1,10 +1,19 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
+import vercel from '@astrojs/vercel';
 
 export default defineConfig({
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  adapter: vercel({
+    // Sirve las imágenes de public/ optimizadas por Vercel.
+    imageService: true,
+    webAnalytics: { enabled: false },
+  }),
   server: { port: 4325, host: true },
   devToolbar: { enabled: false },
+  vite: {
+    // El cliente nativo de libSQL (solo se usa con archivos locales) no debe
+    // empaquetarse dentro de la función serverless.
+    ssr: { external: ['@libsql/client', 'libsql'] },
+  },
 });
