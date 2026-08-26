@@ -10,6 +10,17 @@ const departamentos = [
   'Albardón', 'Angaco', '9 de Julio', '25 de Mayo', 'San Martín', 'Sarmiento',
   'Zonda', 'Ullum', 'Jáchal', 'Iglesia', 'Calingasta', 'Valle Fértil',
 ];
+const meses = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+const dias = Array.from({ length: 31 }, (_, i) => i + 1);
+const anioNacHasta = anioActual - 17;
+const anioNacDesde = anioActual - 41;
+const aniosNacimiento = Array.from(
+  { length: anioNacHasta - anioNacDesde + 1 },
+  (_, i) => anioNacHasta - i,
+);
 ---
 
 <section class="formulario" id="postulate">
@@ -106,8 +117,37 @@ const departamentos = [
             </div>
           </div>
           <div class="campo">
-            <label for="fecha_nacimiento">Fecha de nacimiento <span class="req">*</span></label>
-            <input class="control" id="fecha_nacimiento" name="fecha_nacimiento" type="date" required />
+            <span class="campo-titulo">Fecha de nacimiento <span class="req">*</span></span>
+            <div class="fecha-trio">
+              <label>
+                Día
+                <select class="control" id="nac_dia" name="nac_dia" required>
+                  <option value="">Día</option>
+                  {dias.map((d) => (
+                    <option value={String(d).padStart(2, '0')}>{d}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Mes
+                <select class="control" id="nac_mes" name="nac_mes" required>
+                  <option value="">Mes</option>
+                  {meses.map((nombre, i) => (
+                    <option value={String(i + 1).padStart(2, '0')}>{nombre}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Año
+                <select class="control" id="nac_anio" name="nac_anio" required>
+                  <option value="">Año</option>
+                  {aniosNacimiento.map((a) => (
+                    <option value={String(a)}>{a}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <input type="hidden" id="fecha_nacimiento" name="fecha_nacimiento" />
             <p class="ayuda" id="ayuda-edad">Requisito del premio: tener entre 18 y 40 años.</p>
           </div>
         </fieldset>
@@ -297,6 +337,22 @@ const departamentos = [
   .bloque-nominador + fieldset { border-top: 0; padding-top: 0; }
 
   .campo-check { margin-top: .75rem; }
+
+  .campo-titulo {
+    display: block; font-weight: 600; font-size: .88rem; margin-bottom: .45rem; color: var(--tinta);
+  }
+  .fecha-trio {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: .7rem;
+  }
+  .fecha-trio label {
+    display: flex; flex-direction: column; gap: .35rem;
+    font-size: .75rem; font-weight: 600; color: var(--tinta-suave); margin-bottom: 0;
+  }
+  @media (max-width: 520px) {
+    .fecha-trio { grid-template-columns: 1fr; }
+  }
   .check {
     display: flex; gap: .75rem; align-items: flex-start;
     font-weight: 400 !important; font-size: .88rem; line-height: 1.55; cursor: pointer;
@@ -343,6 +399,9 @@ const departamentos = [
   const contadorRelleno = document.getElementById('contador-relleno') as HTMLSpanElement;
   const contadorLinea = contador.closest('.contador-linea') as HTMLElement;
   const cuit = document.getElementById('cuit') as HTMLInputElement;
+  const nacDia = document.getElementById('nac_dia') as HTMLSelectElement;
+  const nacMes = document.getElementById('nac_mes') as HTMLSelectElement;
+  const nacAnio = document.getElementById('nac_anio') as HTMLSelectElement;
   const nacimiento = document.getElementById('fecha_nacimiento') as HTMLInputElement;
   const ayudaEdad = document.getElementById('ayuda-edad') as HTMLParagraphElement;
   const barraProgreso = document.getElementById('progreso-barra') as HTMLSpanElement;
@@ -414,20 +473,31 @@ const departamentos = [
     if (d.length === 11) cuit.value = d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10);
   });
 
-  // Muestra la edad calculada en vivo para que se vea si entra en el rango.
-  nacimiento.addEventListener('change', () => {
+  function sincronizarNacimiento() {
+    if (nacDia.value && nacMes.value && nacAnio.value) {
+      nacimiento.value = `${nacAnio.value}-${nacMes.value}-${nacDia.value}`;
+    } else {
+      nacimiento.value = '';
+    }
+
     if (!nacimiento.value) {
       ayudaEdad.textContent = 'Requisito del premio: tener entre 18 y 40 años.';
       ayudaEdad.style.color = '';
       return;
     }
-    const n = new Date(nacimiento.value);
+    const [a, m, d] = nacimiento.value.split('-').map(Number);
+    const n = new Date(a, m - 1, d);
+    if (n.getFullYear() !== a || n.getMonth() !== m - 1 || n.getDate() !== d) {
+      ayudaEdad.textContent = 'Esa fecha no es válida. Revisá el día y el mes.';
+      ayudaEdad.style.color = 'var(--alerta)';
+      nacimiento.value = '';
+      return;
+    }
     const hoy = new Date();
-    let edad = hoy.getFullYear() - n.getFullYear();
-    const m = hoy.getMonth() - n.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < n.getDate())) edad--;
+    let edad = hoy.getFullYear() - a;
+    const dm = hoy.getMonth() + 1 - m;
+    if (dm < 0 || (dm === 0 && hoy.getDate() < d)) edad--;
 
-    if (Number.isNaN(edad)) return;
     if (edad < 18 || edad > 40) {
       ayudaEdad.textContent = `Edad: ${edad} años. El premio es para personas de 18 a 40 años.`;
       ayudaEdad.style.color = 'var(--alerta)';
@@ -435,7 +505,8 @@ const departamentos = [
       ayudaEdad.textContent = `Edad: ${edad} años. Cumplís el requisito.`;
       ayudaEdad.style.color = 'var(--exito)';
     }
-  });
+  }
+  [nacDia, nacMes, nacAnio].forEach((el) => el.addEventListener('change', sincronizarNacimiento));
 
   /* ---------- envío ---------- */
   function limpiarErrores() {
@@ -455,7 +526,8 @@ const departamentos = [
       span.className = 'msg-error';
       span.textContent = mensaje;
       cont.appendChild(span);
-      if (!primero) primero = input!;
+      const foco = campo === 'fecha_nacimiento' ? nacDia : input!;
+      if (!primero) primero = foco;
     }
     alerta.textContent = 'Revisá los campos marcados y volvé a intentar.';
     alerta.hidden = false;
@@ -465,6 +537,7 @@ const departamentos = [
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    sincronizarNacimiento();
     limpiarErrores();
 
     if (!form.reportValidity()) return;

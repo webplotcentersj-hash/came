@@ -23,12 +23,24 @@ export function formatearCuit(cuit: string): string {
 }
 
 export function edadEn(fechaNacimiento: string, referencia = new Date()): number | null {
-  const n = new Date(fechaNacimiento);
-  if (Number.isNaN(n.getTime())) return null;
-  let edad = referencia.getFullYear() - n.getFullYear();
-  const m = referencia.getMonth() - n.getMonth();
-  if (m < 0 || (m === 0 && referencia.getDate() < n.getDate())) edad--;
+  const [a, m, d] = fechaNacimiento.split('-').map(Number);
+  if (!a || !m || !d) return null;
+  const n = new Date(a, m - 1, d);
+  if (n.getFullYear() !== a || n.getMonth() !== m - 1 || n.getDate() !== d) return null;
+  let edad = referencia.getFullYear() - a;
+  const dm = referencia.getMonth() + 1 - m;
+  if (dm < 0 || (dm === 0 && referencia.getDate() < d)) edad--;
   return edad;
+}
+
+function armarFechaNacimiento(form: FormData): string {
+  const iso = limpiar(form.get('fecha_nacimiento'));
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const dia = limpiar(form.get('nac_dia'));
+  const mes = limpiar(form.get('nac_mes'));
+  const anio = limpiar(form.get('nac_anio'));
+  if (dia && mes && anio) return `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+  return '';
 }
 
 export interface DatosPostulacion {
@@ -62,7 +74,7 @@ export function validarPostulacion(form: FormData): { datos: DatosPostulacion; e
     apellido: limpiar(form.get('apellido')),
     email: limpiar(form.get('email')).toLowerCase(),
     telefono: limpiar(form.get('telefono')),
-    fecha_nacimiento: limpiar(form.get('fecha_nacimiento')),
+    fecha_nacimiento: armarFechaNacimiento(form),
     empresa: limpiar(form.get('empresa')),
     cuit: limpiar(form.get('cuit')),
     rubro: limpiar(form.get('rubro')),
