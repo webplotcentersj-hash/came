@@ -44,10 +44,6 @@ const duplicada = Astro.url.searchParams.get('dup') === '1';
           <a href="/" class="btn btn-violeta">Volver al inicio</a>
           <a href="/?tipo=nominacion#postulate" class="btn btn-fantasma">Nominar a alguien más</a>
         </div>
-
-        <p class="consulta">
-          ¿Dudas? Escribinos a <a href="mailto:premio@camejovensanjuan.org">premio@camejovensanjuan.org</a>
-        </p>
       </div>
     </div>
   </main>
@@ -78,5 +74,4 @@ const duplicada = Astro.url.searchParams.get('dup') === '1';
   .proximos strong { color: var(--violeta); margin-right: .3rem; }
 
   .acciones { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
-  .consulta { margin: 1.75rem 0 0; font-size: .85rem; color: var(--tinta-suave); }
 </style>

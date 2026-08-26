@@ -231,9 +231,10 @@ const ticker = [
     <div class="contenedor">
       <header class="seccion-header reveal">
         <span class="pastilla pastilla-violeta">Requisitos</span>
-        <h2>Tres condiciones.<br />Nada más.</h2>
+        <h2>Condiciones de participación</h2>
         <p class="seccion-bajada">
-          No hay letra chica ni papeleo previo. Si cumplís estos tres puntos, ya podés postularte.
+          Podrán inscribirse quienes reúnan los tres requisitos que se detallan a continuación.
+          La postulación es gratuita y no requiere documentación previa.
         </p>
       </header>
 
@@ -398,11 +399,6 @@ const ticker = [
           </details>
         ))}
       </div>
-
-      <p class="faq-pie reveal">
-        ¿Te quedó otra duda? Escribinos a
-        <a href="mailto:premio@camejovensanjuan.org">premio@camejovensanjuan.org</a>
-      </p>
     </div>
   </section>
 
@@ -536,9 +532,30 @@ const ticker = [
   .nav a:hover::after { transform: scaleX(1); }
   @media (max-width: 940px) { .nav { display: none; } }
 
-  .cta-barra { margin-left: auto; }
+  .cta-barra {
+    margin-left: auto;
+    padding: .42rem 1.05rem;
+    font-size: .8rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    box-shadow: none;
+    transform: none;
+  }
+  .cta-barra::after { content: none; }
+  .cta-barra:hover,
+  .cta-barra:active {
+    transform: none;
+    box-shadow: none;
+    filter: brightness(1.06);
+  }
   @media (min-width: 941px) { .cta-barra { margin-left: 0; } }
-  @media (max-width: 400px) { .cta-barra { padding-inline: .9rem; } }
+  @media (max-width: 400px) { .cta-barra { padding-inline: .85rem; } }
+
+  .barra.flotando .cta-barra {
+    background: var(--violeta);
+    color: #fff;
+  }
+  .barra.flotando .cta-barra:hover { background: var(--violeta-700); filter: none; }
 
   /* --- estado desplazado: fondo claro --- */
   .barra.flotando {
@@ -991,8 +1008,6 @@ const ticker = [
 
   .faq-cuerpo { padding: 0 0 1.3rem; }
   .faq-cuerpo p { margin: 0; color: var(--tinta-suave); font-size: .94rem; }
-
-  .faq-pie { text-align: center; margin-top: 2.5rem; font-size: .93rem; color: var(--tinta-suave); }
 
   /* ===================== CTA móvil ===================== */
   .cta-movil {

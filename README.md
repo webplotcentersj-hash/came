@@ -231,8 +231,7 @@ oscurece arriba y abajo, y manchas de color desenfocadas. Si se cambia la foto, 
 - **Fecha de cierre**: el flyer decía "martes 18 de agosto", que ya pasó. En `.env` quedó una
   fecha provisoria (`PUBLIC_FECHA_CIERRE`) que alimenta la cuenta regresiva del hero y la
   barra fija de mobile. Ajustala a la fecha real de esta edición.
-- **Email de contacto**: hoy figura `premio@camejovensanjuan.org` en el pie, el FAQ, `/bases`
-  y `/gracias`. Cambiarlo por la casilla oficial.
+- **Email de contacto**: todavía no hay casilla oficial publicada en el sitio.
 - **Bases y condiciones**: `/bases` tiene un resumen redactado a partir de los requisitos
   conocidos. Reemplazar por el reglamento oficial cuando esté firmado.
 - **Emails automáticos**: hoy no se envía ninguno (la copia del formulario no promete uno).
