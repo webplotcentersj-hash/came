@@ -8,12 +8,21 @@ interface Props {
   precargarHero?: boolean;
 }
 
+const TITULO_DEFAULT = 'Premio Joven Empresario Sanjuanino 2026 | Inscripción abierta';
+const DESCRIPCION_DEFAULT =
+  'La convocatoria 2026 ya está abierta. Si tenés entre 18 y 40 años y una empresa en San Juan, postulate gratis al reconocimiento más importante de la provincia.';
+
 const {
-  title = 'Premio Joven Empresario Sanjuanino — Edición 2026',
-  description = 'Postulate al Premio Joven Empresario Sanjuanino 2026. Para emprendedores de 18 a 40 años con empresa en San Juan. Inscripción gratuita. Organizan CAME Joven, JEFES, FESJ y CAME.',
+  title = TITULO_DEFAULT,
+  description = DESCRIPCION_DEFAULT,
   noindex = false,
   precargarHero = false,
 } = Astro.props;
+
+const origen = Astro.site ?? Astro.url;
+const urlCanonico = new URL(Astro.url.pathname, origen).href;
+const imagenOg = new URL('/og.jpg', origen).href;
+const nombreSitio = 'Premio Joven Empresario Sanjuanino';
 ---
 
 <!doctype html>
@@ -23,15 +32,32 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="author" content="CAME Joven, JeFES, FESJ y CAME" />
+    {noindex
+      ? <meta name="robots" content="noindex, nofollow" />
+      : <meta name="robots" content="index, follow, max-image-preview:large" />
+    }
     <meta name="theme-color" content="#250a3a" />
+    <meta name="color-scheme" content="light" />
+    <link rel="canonical" href={urlCanonico} />
 
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:site_name" content={nombreSitio} />
+    <meta property="og:url" content={urlCanonico} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content={new URL('/logos/lockup-blanco.png', Astro.site ?? Astro.url)} />
-    <meta property="og:locale" content="es_AR" />
+    <meta property="og:image" content={imagenOg} />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1376" />
+    <meta property="og:image:height" content="768" />
+    <meta property="og:image:alt" content="Premio Joven Empresario Sanjuanino 2026. Inscripción abierta. El Hongo de Ischigualasto al fondo." />
+
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imagenOg} />
+    <meta name="twitter:image:alt" content="Premio Joven Empresario Sanjuanino 2026. Inscripción abierta." />
 
     <link rel="icon" href="/favicon.png" type="image/png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
@@ -51,6 +77,22 @@ const {
         imagesrcset="/hongo-640.jpg 640w, /hongo-1100.jpg 1100w, /hongo-1920.jpg 1920w"
         imagesizes="100vw"
       />
+    )}
+
+    {!noindex && (
+      <script type="application/ld+json" set:html={JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: nombreSitio,
+        url: new URL('/', origen).href,
+        description,
+        inLanguage: 'es-AR',
+        publisher: {
+          '@type': 'Organization',
+          name: 'CAME Joven San Juan',
+          url: new URL('/', origen).href,
+        },
+      })} />
     )}
   </head>
   <body>
