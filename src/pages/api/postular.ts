@@ -52,47 +52,41 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
 
   try {
-    const client = await db();
-
-    // Evita duplicados exactos enviados dos veces seguidas (doble click, reintento).
-    const { rows } = await client.execute({
-      sql: `SELECT id FROM postulaciones
-            WHERE email = ? AND cuit = ? AND creado_en > datetime('now', '-10 minutes')
-            LIMIT 1`,
-      args: [datos.email, datos.cuit],
-    });
-    if (rows.length > 0) {
+    const desde = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: repetida, error: errorDup } = await db()
+      .from('postulaciones')
+      .select('id')
+      .eq('email', datos.email)
+      .eq('cuit', datos.cuit)
+      .gt('creado_en', desde)
+      .limit(1);
+    if (errorDup) throw errorDup;
+    if (repetida && repetida.length > 0) {
       return responder(quierejson, 200, { ok: true, redirect: '/gracias?dup=1' }, '/gracias?dup=1');
     }
 
-    await client.execute({
-      sql: `INSERT INTO postulaciones
-              (tipo, nombre, apellido, email, telefono, fecha_nacimiento, empresa, cuit, rubro,
-               localidad, web, anio_inicio, empleados, historia,
-               nominador_nombre, nominador_email, nominador_tel, ip, user_agent)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      args: [
-        datos.tipo,
-        datos.nombre,
-        datos.apellido,
-        datos.email,
-        datos.telefono,
-        datos.fecha_nacimiento || null,
-        datos.empresa,
-        datos.cuit,
-        datos.rubro || null,
-        datos.localidad || null,
-        datos.web || null,
-        datos.anio_inicio,
-        datos.empleados || null,
-        datos.historia,
-        datos.tipo === 'nominacion' ? datos.nominador_nombre : null,
-        datos.tipo === 'nominacion' ? datos.nominador_email : null,
-        datos.tipo === 'nominacion' ? datos.nominador_tel || null : null,
-        clientAddress ?? null,
-        request.headers.get('user-agent'),
-      ],
+    const { error } = await db().from('postulaciones').insert({
+      tipo: datos.tipo,
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      email: datos.email,
+      telefono: datos.telefono,
+      fecha_nacimiento: datos.fecha_nacimiento || null,
+      empresa: datos.empresa,
+      cuit: datos.cuit,
+      rubro: datos.rubro || null,
+      localidad: datos.localidad || null,
+      web: datos.web || null,
+      anio_inicio: datos.anio_inicio,
+      empleados: datos.empleados || null,
+      historia: datos.historia,
+      nominador_nombre: datos.tipo === 'nominacion' ? datos.nominador_nombre : null,
+      nominador_email: datos.tipo === 'nominacion' ? datos.nominador_email : null,
+      nominador_tel: datos.tipo === 'nominacion' ? datos.nominador_tel || null : null,
+      ip: clientAddress ?? null,
+      user_agent: request.headers.get('user-agent'),
     });
+    if (error) throw error;
   } catch (err) {
     console.error('[postular] error al guardar:', err);
     return responder(

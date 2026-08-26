@@ -8,31 +8,23 @@
 import crypto from 'node:crypto';
 import readline from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
-try { process.loadEnvFile('.env'); } catch { /* sin .env: se usan los valores por defecto */ }
+import { createClient } from '@supabase/supabase-js';
 
-const url = (process.env.DATABASE_URL ?? '').trim() || 'file:./data/premio.db';
-const authToken = process.env.DATABASE_AUTH_TOKEN;
-const { createClient } = url.startsWith('file:')
-  ? await import('@libsql/client')
-  : await import('@libsql/client/web');
+try { process.loadEnvFile('.env'); } catch { /* sin .env */ }
 
-const client = createClient({ url, authToken });
+const url = (process.env.SUPABASE_URL ?? '').trim() || 'https://ftdhunbwaglhxuwnbrit.supabase.co';
+const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim();
+if (!key) {
+  console.error('✗ Falta SUPABASE_SERVICE_ROLE_KEY en .env');
+  process.exit(1);
+}
+const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
   const hash = crypto.scryptSync(password, salt, 64);
   return `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`;
 }
-
-await client.execute(`
-  CREATE TABLE IF NOT EXISTS admins (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    email         TEXT NOT NULL UNIQUE,
-    nombre        TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    creado_en     TEXT NOT NULL DEFAULT (datetime('now'))
-  )
-`);
 
 let [email, nombre, password] = process.argv.slice(2);
 
@@ -56,19 +48,33 @@ if (String(password).length < 8) {
   process.exit(1);
 }
 
-const existe = await client.execute({ sql: 'SELECT id FROM admins WHERE email = ?', args: [email] });
+const hash = hashPassword(password);
+const { data: existe, error: errorBuscar } = await supabase
+  .from('admins')
+  .select('id')
+  .eq('email', email)
+  .maybeSingle();
+if (errorBuscar) {
+  console.error('✗ No se pudo consultar admins:', errorBuscar.message);
+  process.exit(1);
+}
 
-if (existe.rows.length > 0) {
-  await client.execute({
-    sql: 'UPDATE admins SET nombre = ?, password_hash = ? WHERE email = ?',
-    args: [nombre, hashPassword(password), email],
-  });
+if (existe) {
+  const { error } = await supabase
+    .from('admins')
+    .update({ nombre, password_hash: hash })
+    .eq('email', email);
+  if (error) {
+    console.error('✗ No se pudo actualizar:', error.message);
+    process.exit(1);
+  }
   console.log(`✓ Usuario actualizado: ${email}`);
 } else {
-  await client.execute({
-    sql: 'INSERT INTO admins (email, nombre, password_hash) VALUES (?,?,?)',
-    args: [email, nombre, hashPassword(password)],
-  });
+  const { error } = await supabase.from('admins').insert({ email, nombre, password_hash: hash });
+  if (error) {
+    console.error('✗ No se pudo crear:', error.message);
+    process.exit(1);
+  }
   console.log(`✓ Usuario creado: ${email}`);
 }
 

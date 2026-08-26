@@ -1,5 +1,4 @@
 import { db, type Postulacion } from './db';
-import type { InValue } from '@libsql/client';
 
 export interface Filtros {
   q: string;
@@ -19,60 +18,47 @@ export function leerFiltros(url: URL): Filtros {
   };
 }
 
-/** Construye el WHERE compartido por el listado, el contador y la exportación CSV. */
-function condiciones(f: Filtros): { sql: string; args: InValue[] } {
-  const partes: string[] = [];
-  const args: InValue[] = [];
-
+function filtrar(query: any, f: Filtros) {
   if (f.q) {
-    partes.push(
-      `(nombre LIKE ?1 OR apellido LIKE ?1 OR empresa LIKE ?1 OR email LIKE ?1 OR cuit LIKE ?1
-        OR (nombre || ' ' || apellido) LIKE ?1)`,
-    );
-    args.push(`%${f.q}%`);
+    const t = f.q.replace(/[%_,()]/g, '');
+    if (t) {
+      query = query.or(
+        `nombre.ilike.%${t}%,apellido.ilike.%${t}%,empresa.ilike.%${t}%,email.ilike.%${t}%,cuit.ilike.%${t}%`,
+      );
+    }
   }
-  if (f.estado) {
-    partes.push(`estado = ?${args.length + 1}`);
-    args.push(f.estado);
-  }
-  if (f.tipo) {
-    partes.push(`tipo = ?${args.length + 1}`);
-    args.push(f.tipo);
-  }
-
-  return { sql: partes.length ? `WHERE ${partes.join(' AND ')}` : '', args };
+  if (f.estado) query = query.eq('estado', f.estado);
+  if (f.tipo) query = query.eq('tipo', f.tipo);
+  return query;
 }
 
 export async function listar(f: Filtros): Promise<{ filas: Postulacion[]; total: number; paginas: number }> {
-  const client = await db();
-  const { sql: where, args } = condiciones(f);
+  const conteo = await filtrar(
+    db().from('postulaciones').select('*', { count: 'exact', head: true }),
+    f,
+  );
+  if (conteo.error) throw conteo.error;
 
-  const conteo = await client.execute({
-    sql: `SELECT COUNT(*) AS n FROM postulaciones ${where}`,
-    args,
-  });
-  const total = Number((conteo.rows[0] as any).n);
+  const total = conteo.count ?? 0;
   const paginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const pagina = Math.min(f.pagina, paginas);
+  const desde = (pagina - 1) * POR_PAGINA;
 
-  const { rows } = await client.execute({
-    sql: `SELECT * FROM postulaciones ${where}
-          ORDER BY creado_en DESC, id DESC
-          LIMIT ?${args.length + 1} OFFSET ?${args.length + 2}`,
-    args: [...args, POR_PAGINA, (pagina - 1) * POR_PAGINA],
-  });
+  const { data, error } = await filtrar(db().from('postulaciones').select('*'), f)
+    .order('creado_en', { ascending: false })
+    .order('id', { ascending: false })
+    .range(desde, desde + POR_PAGINA - 1);
+  if (error) throw error;
 
-  return { filas: rows as unknown as Postulacion[], total, paginas };
+  return { filas: (data ?? []) as Postulacion[], total, paginas };
 }
 
 export async function listarTodo(f: Filtros): Promise<Postulacion[]> {
-  const client = await db();
-  const { sql: where, args } = condiciones(f);
-  const { rows } = await client.execute({
-    sql: `SELECT * FROM postulaciones ${where} ORDER BY creado_en DESC, id DESC`,
-    args,
-  });
-  return rows as unknown as Postulacion[];
+  const { data, error } = await filtrar(db().from('postulaciones').select('*'), f)
+    .order('creado_en', { ascending: false })
+    .order('id', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Postulacion[];
 }
 
 export interface Metricas {
@@ -87,53 +73,39 @@ export interface Metricas {
 }
 
 export async function metricas(): Promise<Metricas> {
-  const client = await db();
-  const { rows } = await client.execute(`
-    SELECT
-      COUNT(*)                                                        AS total,
-      SUM(estado = 'nuevo')                                           AS nuevo,
-      SUM(estado = 'en_revision')                                     AS en_revision,
-      SUM(estado = 'preseleccionado')                                 AS preseleccionado,
-      SUM(estado = 'descartado')                                      AS descartado,
-      SUM(tipo = 'postulacion')                                       AS postulaciones,
-      SUM(tipo = 'nominacion')                                        AS nominaciones,
-      SUM(creado_en > datetime('now', '-7 days'))                     AS ultimos7
-    FROM postulaciones
-  `);
-  const r = rows[0] as any;
+  const { data, error } = await db().rpc('metricas_postulaciones');
+  if (error) throw error;
+  const r = Array.isArray(data) ? data[0] : data;
   const n = (v: unknown) => Number(v ?? 0);
   return {
-    total: n(r.total),
-    nuevo: n(r.nuevo),
-    en_revision: n(r.en_revision),
-    preseleccionado: n(r.preseleccionado),
-    descartado: n(r.descartado),
-    postulaciones: n(r.postulaciones),
-    nominaciones: n(r.nominaciones),
-    ultimos7: n(r.ultimos7),
+    total: n(r?.total),
+    nuevo: n(r?.nuevo),
+    en_revision: n(r?.en_revision),
+    preseleccionado: n(r?.preseleccionado),
+    descartado: n(r?.descartado),
+    postulaciones: n(r?.postulaciones),
+    nominaciones: n(r?.nominaciones),
+    ultimos7: n(r?.ultimos7),
   };
 }
 
 export async function obtener(id: number): Promise<Postulacion | null> {
-  const client = await db();
-  const { rows } = await client.execute({
-    sql: 'SELECT * FROM postulaciones WHERE id = ? LIMIT 1',
-    args: [id],
-  });
-  return (rows[0] as unknown as Postulacion) ?? null;
+  const { data, error } = await db().from('postulaciones').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  return (data as Postulacion | null) ?? null;
 }
 
 export async function actualizar(id: number, estado: string, notas: string): Promise<void> {
-  const client = await db();
-  await client.execute({
-    sql: 'UPDATE postulaciones SET estado = ?, notas = ? WHERE id = ?',
-    args: [estado, notas || null, id],
-  });
+  const { error } = await db()
+    .from('postulaciones')
+    .update({ estado, notas: notas || null })
+    .eq('id', id);
+  if (error) throw error;
 }
 
 export async function eliminar(id: number): Promise<void> {
-  const client = await db();
-  await client.execute({ sql: 'DELETE FROM postulaciones WHERE id = ?', args: [id] });
+  const { error } = await db().from('postulaciones').delete().eq('id', id);
+  if (error) throw error;
 }
 
 /** Construye una querystring conservando los filtros activos. */

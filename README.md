@@ -3,7 +3,7 @@
 Landing de la convocatoria + base de datos de postulaciones + panel de administración.
 
 - **Framework:** Astro 5 en modo `server` (SSR), adaptador `@astrojs/vercel`
-- **Base de datos:** SQLite vía `@libsql/client` — archivo local en desarrollo, [Turso](https://turso.tech) en producción, sin cambiar código
+- **Base de datos:** [Supabase](https://supabase.com) (Postgres). El formulario y el panel hablan con la API en el servidor; RLS deja las tablas cerradas al público.
 - **Sin dependencias de UI:** CSS propio, cero frameworks de estilos
 
 **Paleta:** rosa `#ffd8dd` · violeta `#662d91` · arena `#c7b299`
@@ -50,12 +50,11 @@ npm run db:seed
 ```
 
 Carga cinco postulaciones ficticias (emails `@ejemplo.test`) para ver el panel con contenido.
-Para empezar de cero, borrá `data/premio.db` y volvé a levantar el sitio: el esquema se recrea solo.
 
 ### Usuarios del panel
 
-Los usuarios viven en la tabla `admins` de la base local, que **no se versiona**: al clonar el
-repo no existe ninguno. Creá el tuyo con `npm run admin:create` (interactivo) o de una sola vez:
+Los usuarios viven en la tabla `admins` de Supabase. Creá el tuyo con `npm run admin:create`
+(interactivo) o de una sola vez:
 
 ```bash
 npm run admin:create -- tuemail@dominio.com "Tu Nombre" "una-clave-larga"
@@ -71,7 +70,7 @@ Las contraseñas se guardan con scrypt + salt; nunca en texto plano.
 ```
 src/
   lib/
-    db.ts           cliente libSQL + esquema (se crea solo al primer uso)
+    db.ts           cliente de Supabase (service role, solo servidor)
     auth.ts         hash scrypt, cookie de sesión firmada, requireAdmin()
     validacion.ts   validación del formulario (edad 18-40, CUIT, 1 año operando)
     consultas.ts    filtros, listado paginado, métricas, export
@@ -97,8 +96,6 @@ src/
 scripts/
   create-admin.mjs  alta de usuarios del panel
   seed.mjs          datos de ejemplo
-data/
-  premio.db         base SQLite (ignorada por git)
 ```
 
 ---
@@ -141,34 +138,12 @@ Todo `/admin/*` está detrás de `requireAdmin()` y marcado `noindex`.
 El proyecto ya usa el adaptador `@astrojs/vercel`. Vercel detecta Astro solo: no hace falta
 tocar el comando de build ni el directorio de salida.
 
-### 1. Base de datos en Turso
+### 1. Base de datos en Supabase
 
-**Vercel no persiste el sistema de archivos**: la base en archivo se borraría en cada
-invocación. En producción hay que usar [Turso](https://turso.tech), que es el mismo SQLite
-por HTTP y tiene plan gratuito.
+El proyecto **Came Joven** ya tiene las tablas `postulaciones` y `admins`, con RLS
+activado: el navegador no puede leer ni escribir. El servidor usa la *service role*.
 
-```bash
-curl -sSfL https://get.tur.so/install.sh | bash
-```
-
-```bash
-turso auth signup
-```
-
-```bash
-turso db create premio-joven-empresario --location gru
-```
-
-```bash
-turso db show premio-joven-empresario --url
-```
-
-```bash
-turso db tokens create premio-joven-empresario
-```
-
-Guardá la URL (`libsql://…`) y el token. **El esquema se crea solo** la primera vez que la
-app toca la base: no hay migraciones que correr.
+En el dashboard: *Settings → API* copiá la `service_role` (secret).
 
 ### 2. Variables de entorno en Vercel
 
@@ -176,8 +151,8 @@ En *Project → Settings → Environment Variables*, para **Production** y **Pre
 
 | Variable | Valor |
 |---|---|
-| `DATABASE_URL` | `libsql://premio-joven-empresario-tuusuario.turso.io` |
-| `DATABASE_AUTH_TOKEN` | El token de Turso |
+| `SUPABASE_URL` | `https://ftdhunbwaglhxuwnbrit.supabase.co` |
+| `SUPABASE_SERVICE_ROLE_KEY` | La clave `service_role` de Settings → API |
 | `SESSION_SECRET` | Cadena aleatoria larga — **distinta** de la de desarrollo |
 | `PUBLIC_FECHA_CIERRE` | `2026-09-30T23:59:00-03:00` |
 
@@ -185,7 +160,7 @@ En *Project → Settings → Environment Variables*, para **Production** y **Pre
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Las cuatro se leen de `process.env` **en tiempo de ejecución**, así que cambiar la fecha de
+Se leen de `process.env` **en tiempo de ejecución**, así que cambiar la fecha de
 cierre o rotar el secreto no exige recompilar: alcanza con reiniciar el deploy.
 
 ### 3. Conectar el repo
@@ -198,22 +173,11 @@ vercel --prod
 
 ### 4. Crear el primer usuario del panel
 
-Apuntando a la base de producción. Ojo: esto escribe en la base real.
-
-En PowerShell (Windows):
+Con `SUPABASE_SERVICE_ROLE_KEY` en el `.env` local (es la misma base de producción):
 
 ```bash
-$env:DATABASE_URL="libsql://..."; $env:DATABASE_AUTH_TOKEN="ey..."; npm run admin:create
+npm run admin:create
 ```
-
-En bash / macOS / Linux:
-
-```bash
-DATABASE_URL="libsql://..." DATABASE_AUTH_TOKEN="ey..." npm run admin:create
-```
-
-Las variables de la terminal tienen prioridad sobre el `.env` local, así que el comando
-apunta a Turso aunque tengas la base en archivo configurada para desarrollo.
 
 ### Probar el entorno de Vercel en local
 
@@ -233,10 +197,8 @@ Si en algún momento conviene autohospedarlo en lugar de Vercel:
 npm i @astrojs/node && npm rm @astrojs/vercel
 ```
 
-Cambiá el adaptador en `astro.config.mjs` por `node({ mode: 'standalone' })` y ya podés
-volver a `DATABASE_URL="file:./data/premio.db"`, persistiendo el directorio `data/` entre
-despliegues. El resto del código no se toca: `src/lib/db.ts` elige el cliente de libSQL
-según si la URL es un archivo o una base remota.
+Cambiá el adaptador en `astro.config.mjs` por `node({ mode: 'standalone' })`.
+La base sigue siendo Supabase: no hace falta un archivo local.
 
 ---
 

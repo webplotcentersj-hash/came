@@ -22,7 +22,7 @@ try {
 } catch (err) {
   console.error('[admin/login] no se pudo abrir la base:', err);
   errorBase =
-    'No hay conexión con la base de datos. En Vercel hay que configurar DATABASE_URL y DATABASE_AUTH_TOKEN (Turso) y SESSION_SECRET.';
+    'No hay conexión con la base de datos. En Vercel hay que configurar SUPABASE_SERVICE_ROLE_KEY y SESSION_SECRET.';
 }
 
 if (!errorBase && Astro.request.method === 'POST') {
@@ -41,7 +41,7 @@ if (!errorBase && Astro.request.method === 'POST') {
   } catch (err) {
     console.error('[admin/login] error al ingresar:', err);
     errorBase =
-      'No hay conexión con la base de datos. En Vercel hay que configurar DATABASE_URL y DATABASE_AUTH_TOKEN (Turso) y SESSION_SECRET.';
+      'No hay conexión con la base de datos. En Vercel hay que configurar SUPABASE_SERVICE_ROLE_KEY y SESSION_SECRET.';
   }
 }
 ---

@@ -95,18 +95,17 @@ export function requireAdmin(ctx: APIContext): SessionData | Response {
 }
 
 export async function findAdminByEmail(email: string) {
-  const client = await db();
-  const { rows } = await client.execute({
-    sql: 'SELECT id, email, nombre, password_hash FROM admins WHERE email = ? LIMIT 1',
-    args: [email.trim().toLowerCase()],
-  });
-  return rows[0] as unknown as
-    | { id: number; email: string; nombre: string; password_hash: string }
-    | undefined;
+  const { data, error } = await db()
+    .from('admins')
+    .select('id, email, nombre, password_hash')
+    .eq('email', email.trim().toLowerCase())
+    .maybeSingle();
+  if (error) throw error;
+  return data as { id: number; email: string; nombre: string; password_hash: string } | null;
 }
 
 export async function countAdmins(): Promise<number> {
-  const client = await db();
-  const { rows } = await client.execute('SELECT COUNT(*) AS n FROM admins');
-  return Number((rows[0] as any).n);
+  const { count, error } = await db().from('admins').select('*', { count: 'exact', head: true });
+  if (error) throw error;
+  return count ?? 0;
 }

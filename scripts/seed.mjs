@@ -4,28 +4,17 @@
  *   npm run db:seed
  * No borra nada: solo agrega registros con emails de prueba (@ejemplo.test).
  */
+import { createClient } from '@supabase/supabase-js';
+
 try { process.loadEnvFile('.env'); } catch { /* opcional */ }
 
-const url = (process.env.DATABASE_URL ?? '').trim() || 'file:./data/premio.db';
-const authToken = process.env.DATABASE_AUTH_TOKEN;
-const { createClient } = url.startsWith('file:')
-  ? await import('@libsql/client')
-  : await import('@libsql/client/web');
-
-const client = createClient({ url, authToken });
-
-await client.execute(`
-  CREATE TABLE IF NOT EXISTS postulaciones (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    tipo TEXT NOT NULL DEFAULT 'postulacion',
-    nombre TEXT NOT NULL, apellido TEXT NOT NULL, email TEXT NOT NULL, telefono TEXT NOT NULL,
-    fecha_nacimiento TEXT, empresa TEXT NOT NULL, cuit TEXT, rubro TEXT, localidad TEXT, web TEXT,
-    anio_inicio INTEGER, empleados TEXT, historia TEXT,
-    nominador_nombre TEXT, nominador_email TEXT, nominador_tel TEXT,
-    estado TEXT NOT NULL DEFAULT 'nuevo', notas TEXT, ip TEXT, user_agent TEXT,
-    creado_en TEXT NOT NULL DEFAULT (datetime('now'))
-  )
-`);
+const url = (process.env.SUPABASE_URL ?? '').trim() || 'https://ftdhunbwaglhxuwnbrit.supabase.co';
+const key = (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim();
+if (!key) {
+  console.error('✗ Falta SUPABASE_SERVICE_ROLE_KEY en .env');
+  process.exit(1);
+}
+const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 const ejemplos = [
   {
@@ -68,28 +57,48 @@ const ejemplos = [
 ];
 
 for (const e of ejemplos) {
-  const { rows } = await client.execute({
-    sql: 'SELECT id FROM postulaciones WHERE email = ? LIMIT 1',
-    args: [e.email],
-  });
-  if (rows.length > 0) {
+  const { data: existe, error: errorBuscar } = await supabase
+    .from('postulaciones')
+    .select('id')
+    .eq('email', e.email)
+    .maybeSingle();
+  if (errorBuscar) {
+    console.error('✗', errorBuscar.message);
+    process.exit(1);
+  }
+  if (existe) {
     console.log(`· ya existía: ${e.email}`);
     continue;
   }
 
-  await client.execute({
-    sql: `INSERT INTO postulaciones
-            (tipo, nombre, apellido, email, telefono, fecha_nacimiento, empresa, cuit, rubro,
-             localidad, web, anio_inicio, empleados, historia,
-             nominador_nombre, nominador_email, nominador_tel, estado, notas, ip, user_agent, creado_en)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?, datetime('now', ?))`,
-    args: [
-      e.tipo, e.nombre, e.apellido, e.email, e.telefono, e.fecha_nacimiento, e.empresa, e.cuit,
-      e.rubro, e.localidad, e.web || null, e.anio_inicio, e.empleados, e.historia,
-      e.nominador_nombre ?? null, e.nominador_email ?? null, e.nominador_tel ?? null,
-      e.estado, e.notas ?? null, '127.0.0.1', 'seed', `-${e.dias} days`,
-    ],
+  const { error } = await supabase.from('postulaciones').insert({
+    tipo: e.tipo,
+    nombre: e.nombre,
+    apellido: e.apellido,
+    email: e.email,
+    telefono: e.telefono,
+    fecha_nacimiento: e.fecha_nacimiento,
+    empresa: e.empresa,
+    cuit: e.cuit,
+    rubro: e.rubro,
+    localidad: e.localidad,
+    web: e.web || null,
+    anio_inicio: e.anio_inicio,
+    empleados: e.empleados,
+    historia: e.historia,
+    nominador_nombre: e.nominador_nombre ?? null,
+    nominador_email: e.nominador_email ?? null,
+    nominador_tel: e.nominador_tel ?? null,
+    estado: e.estado,
+    notas: e.notas ?? null,
+    ip: '127.0.0.1',
+    user_agent: 'seed',
+    creado_en: new Date(Date.now() - e.dias * 86400000).toISOString(),
   });
+  if (error) {
+    console.error(`✗ ${e.email}:`, error.message);
+    process.exit(1);
+  }
   console.log(`✓ cargada: ${e.nombre} ${e.apellido} — ${e.empresa}`);
 }
 

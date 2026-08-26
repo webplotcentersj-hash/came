@@ -1,86 +1,25 @@
-import type { Client } from '@libsql/client';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { env } from './env';
 
-const url = env('DATABASE_URL') ?? 'file:./data/premio.db';
-const authToken = env('DATABASE_AUTH_TOKEN');
-const enVercel = Boolean(process.env.VERCEL);
+const SUPABASE_URL_DEFAULT = 'https://ftdhunbwaglhxuwnbrit.supabase.co';
 
-/** Turso y cualquier base remota; el binario nativo solo corre en local con `file:`. */
-const esRemota = !url.startsWith('file:');
+let client: SupabaseClient | null = null;
 
-let client: Client | null = null;
-let ready: Promise<void> | null = null;
-
-const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS postulaciones (
-     id             INTEGER PRIMARY KEY AUTOINCREMENT,
-     tipo           TEXT    NOT NULL DEFAULT 'postulacion',
-     nombre         TEXT    NOT NULL,
-     apellido       TEXT    NOT NULL,
-     email          TEXT    NOT NULL,
-     telefono       TEXT    NOT NULL,
-     fecha_nacimiento TEXT,
-     empresa        TEXT    NOT NULL,
-     cuit           TEXT,
-     rubro          TEXT,
-     localidad      TEXT,
-     web            TEXT,
-     anio_inicio    INTEGER,
-     empleados      TEXT,
-     historia       TEXT,
-     -- datos de quien nomina (solo cuando tipo = 'nominacion')
-     nominador_nombre TEXT,
-     nominador_email  TEXT,
-     nominador_tel    TEXT,
-     estado         TEXT    NOT NULL DEFAULT 'nuevo',
-     notas          TEXT,
-     ip             TEXT,
-     user_agent     TEXT,
-     creado_en      TEXT    NOT NULL DEFAULT (datetime('now'))
-   )`,
-  `CREATE INDEX IF NOT EXISTS idx_post_creado ON postulaciones (creado_en DESC)`,
-  `CREATE INDEX IF NOT EXISTS idx_post_estado ON postulaciones (estado)`,
-  `CREATE INDEX IF NOT EXISTS idx_post_tipo   ON postulaciones (tipo)`,
-  `CREATE TABLE IF NOT EXISTS admins (
-     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-     email         TEXT NOT NULL UNIQUE,
-     nombre        TEXT NOT NULL,
-     password_hash TEXT NOT NULL,
-     creado_en     TEXT NOT NULL DEFAULT (datetime('now'))
-   )`,
-];
-
-async function crearCliente(): Promise<Client> {
-  if (!esRemota) {
-    if (enVercel) {
+/** Cliente de Supabase con la service role: todo el acceso es server-side. */
+export function db(): SupabaseClient {
+  if (!client) {
+    const url = env('SUPABASE_URL') ?? SUPABASE_URL_DEFAULT;
+    const key = env('SUPABASE_SERVICE_ROLE_KEY');
+    if (!key) {
       throw new Error(
-        'En Vercel la base en archivo no persiste. Definí DATABASE_URL (libsql://…) y DATABASE_AUTH_TOKEN de Turso.',
+        'SUPABASE_SERVICE_ROLE_KEY no configurado. Pegalo en .env local y en las variables de Vercel.',
       );
     }
-    const { createClient } = await import('@libsql/client');
-    return createClient({ url, authToken });
-  }
-  // HTTP puro: es el que corresponde en serverless, sin binario nativo.
-  const { createClient } = await import('@libsql/client/web');
-  return createClient({ url, authToken });
-}
-
-/** Cliente libSQL con el esquema garantizado (una sola vez por proceso). */
-export async function db(): Promise<Client> {
-  if (!ready) {
-    ready = (async () => {
-      client = await crearCliente();
-      // En un solo viaje: en serverless cada arranque en frío pagaría el costo.
-      await client.batch(SCHEMA, 'write');
-    })().catch((err) => {
-      // Un fallo no debe dejar cacheada una promesa rechazada para siempre.
-      ready = null;
-      client = null;
-      throw err;
+    client = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
   }
-  await ready;
-  return client!;
+  return client;
 }
 
 export type Estado = 'nuevo' | 'en_revision' | 'preseleccionado' | 'descartado';
