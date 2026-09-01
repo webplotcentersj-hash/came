@@ -21,7 +21,7 @@ const {
 
 const origen = Astro.site ?? Astro.url;
 const urlCanonico = new URL(Astro.url.pathname, origen).href;
-const imagenOg = new URL('/og.jpg', origen).href;
+const imagenOg = new URL('/og.jpg?v=20260901', origen).href;
 const nombreSitio = 'Premio Joven Empresario Sanjuanino';
 ---
 
@@ -48,10 +48,12 @@ const nombreSitio = 'Premio Joven Empresario Sanjuanino';
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={imagenOg} />
+    <meta property="og:image:secure_url" content={imagenOg} />
     <meta property="og:image:type" content="image/jpeg" />
-    <meta property="og:image:width" content="1376" />
-    <meta property="og:image:height" content="768" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Premio Joven Empresario Sanjuanino 2026. Inscripción abierta. El Hongo de Ischigualasto al fondo." />
+    <meta name="image" content={imagenOg} />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
@@ -87,6 +89,7 @@ const nombreSitio = 'Premio Joven Empresario Sanjuanino';
         url: new URL('/', origen).href,
         description,
         inLanguage: 'es-AR',
+        image: imagenOg,
         publisher: {
           '@type': 'Organization',
           name: 'CAME Joven San Juan',
