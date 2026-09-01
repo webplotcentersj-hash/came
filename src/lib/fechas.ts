@@ -1,5 +1,7 @@
 const TZ = 'America/Argentina/Buenos_Aires';
-const CIERRE_DEFAULT = '2026-09-30T23:59:00-03:00';
+export const CIERRE_DEFAULT = '2026-09-14T23:59:00-03:00';
+export const PREMIACION_TEXTO = 'Jueves 17 de septiembre';
+export const PREMIACION_ISO = '2026-09-17';
 
 /** Fecha de cierre de la convocatoria. Nunca tira: un valor vacío o inválido usa el default. */
 export function parseFechaCierre(valor: string | undefined): Date {
@@ -26,7 +28,7 @@ export function formatearCierre(d: Date): { texto: string; hora: string; iso: st
       iso: d.toISOString(),
     };
   } catch {
-    return { texto: '30 de septiembre de 2026', hora: '23:59', iso: d.toISOString() };
+    return { texto: 'Lunes 14 de septiembre', hora: '23:59', iso: d.toISOString() };
   }
 }
 

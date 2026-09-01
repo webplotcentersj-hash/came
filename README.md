@@ -154,7 +154,7 @@ En *Project → Settings → Environment Variables*, para **Production** y **Pre
 | `SUPABASE_URL` | `https://ftdhunbwaglhxuwnbrit.supabase.co` |
 | `SUPABASE_SERVICE_ROLE_KEY` | La clave `service_role` de Settings → API |
 | `SESSION_SECRET` | Cadena aleatoria larga — **distinta** de la de desarrollo |
-| `PUBLIC_FECHA_CIERRE` | `2026-09-30T23:59:00-03:00` |
+| `PUBLIC_FECHA_CIERRE` | `2026-09-14T23:59:00-03:00` |
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -228,9 +228,6 @@ oscurece arriba y abajo, y manchas de color desenfocadas. Si se cambia la foto, 
 
 ## Pendientes de contenido
 
-- **Fecha de cierre**: el flyer decía "martes 18 de agosto", que ya pasó. En `.env` quedó una
-  fecha provisoria (`PUBLIC_FECHA_CIERRE`) que alimenta la cuenta regresiva del hero y la
-  barra fija de mobile. Ajustala a la fecha real de esta edición.
 - **Email de contacto**: todavía no hay casilla oficial publicada en el sitio.
 - **Bases y condiciones**: `/bases` tiene un resumen redactado a partir de los requisitos
   conocidos. Reemplazar por el reglamento oficial cuando esté firmado.
