@@ -14,7 +14,7 @@ export type PostulanteVoto = Pick<
   | 'historia'
   | 'fecha_nacimiento'
   | 'web'
-> & { votado: boolean };
+> & { votado: boolean; conVotos: boolean };
 
 const CAMPOS =
   'id, tipo, nombre, apellido, empresa, rubro, localidad, anio_inicio, empleados, historia, fecha_nacimiento, web';
@@ -31,17 +31,24 @@ export async function listarParaVotar(adminId: number): Promise<{
       .order('apellido', { ascending: true })
       .order('nombre', { ascending: true })
       .order('id', { ascending: true }),
-    db().from('votos').select('postulacion_id').eq('admin_id', adminId),
+    db().from('votos').select('admin_id, postulacion_id'),
   ]);
   if (error) throw error;
   if (votosRes.error) throw votosRes.error;
 
-  const votados = new Set((votosRes.data ?? []).map((v) => Number(v.postulacion_id)));
-  const filas = ((data ?? []) as Omit<PostulanteVoto, 'votado'>[]).map((p) => ({
+  const conVotos = new Set<number>();
+  const propios = new Set<number>();
+  for (const v of votosRes.data ?? []) {
+    const postulacionId = Number(v.postulacion_id);
+    conVotos.add(postulacionId);
+    if (Number(v.admin_id) === adminId) propios.add(postulacionId);
+  }
+  const filas = ((data ?? []) as Omit<PostulanteVoto, 'votado' | 'conVotos'>[]).map((p) => ({
     ...p,
-    votado: votados.has(p.id),
+    votado: propios.has(p.id),
+    conVotos: conVotos.has(p.id),
   }));
-  return { filas, votados: votados.size };
+  return { filas, votados: propios.size };
 }
 
 export async function alternarVoto(

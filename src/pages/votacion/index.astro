@@ -37,8 +37,8 @@ const filas = q
       <p class="eyebrow">Jurado · {sesion.nombre}</p>
       <h1>Postulantes</h1>
       <p class="ayuda">
-        Marcá a quienes votás. Los que ya votaste se ven en otro color.
-        El resto del jurado no ve tu voto.
+        Los que ya tienen votos se ven en violeta. Los que votaste vos, en oro.
+        Nadie ve quién votó.
       </p>
     </div>
     <div class="conteo">
@@ -67,12 +67,16 @@ const filas = q
       {filas.map((p) => {
         const anios = edad(p.fecha_nacimiento);
         return (
-          <li class:list={['tarjeta', { votada: p.votado }]} id={`p-${p.id}`}>
+          <li class:list={['tarjeta', { 'con-votos': p.conVotos, votada: p.votado }]} id={`p-${p.id}`}>
             <div class="top">
               <span class={`tipo tipo-${p.tipo}`}>
                 {p.tipo === 'nominacion' ? 'Nominación' : 'Postulación'}
               </span>
-              {p.votado && <span class="badge">Ya votaste</span>}
+              {p.votado ? (
+                <span class="badge badge-propia">Ya votaste</span>
+              ) : p.conVotos ? (
+                <span class="badge badge-ajena">Ya votado</span>
+              ) : null}
             </div>
             <h2>{p.nombre} {p.apellido}</h2>
             <p class="empresa">{p.empresa}</p>
@@ -136,9 +140,14 @@ const filas = q
     padding: 1.15rem 1.2rem; box-shadow: var(--sombra-sm);
     display: flex; flex-direction: column; gap: .45rem;
   }
+  .tarjeta.con-votos {
+    background: #efe4f8;
+    border: 2px solid #8f56bd;
+    box-shadow: 0 0 0 3px rgba(102, 45, 145, .14);
+  }
   .tarjeta.votada {
     background: #f7efe2;
-    border-color: #d7c4a6;
+    border: 2px solid #c7b299;
     box-shadow: var(--sombra-oro);
   }
   .top { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
@@ -149,9 +158,10 @@ const filas = q
   .tipo-nominacion { background: var(--rosa); color: var(--violeta); }
   .badge {
     margin-left: auto; font-size: .68rem; font-weight: 800; letter-spacing: .04em;
-    text-transform: uppercase; color: #7a6240; background: #ead9bd;
-    border-radius: 999px; padding: .2rem .55rem;
+    text-transform: uppercase; border-radius: 999px; padding: .2rem .55rem;
   }
+  .badge-ajena { color: #fff; background: var(--violeta); }
+  .badge-propia { color: #7a6240; background: #ead9bd; }
   h2 { font-size: 1.08rem; margin: 0; color: var(--tinta); }
   .empresa { margin: 0; font-weight: 600; color: var(--violeta); font-size: .92rem; }
   .meta { margin: 0; font-size: .78rem; color: var(--tinta-suave); }
