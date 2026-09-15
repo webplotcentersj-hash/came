@@ -5,7 +5,7 @@ import LogoPremio from '../components/LogoPremio.astro';
 interface Props {
   title: string;
   usuario: { nombre: string; email: string };
-  activo?: 'listado' | 'detalle';
+  activo?: 'listado' | 'detalle' | 'votos';
 }
 
 const { title, usuario, activo = 'listado' } = Astro.props;
@@ -35,6 +35,7 @@ const { title, usuario, activo = 'listado' } = Astro.props;
         </a>
         <nav class="admin-nav">
           <a href="/admin" class={activo === 'listado' ? 'activo' : ''}>Postulaciones</a>
+          <a href="/admin/votos" class={activo === 'votos' ? 'activo' : ''}>Votos</a>
           <a href="/" target="_blank" rel="noopener">Ver landing ↗</a>
         </nav>
         <div class="admin-usuario">

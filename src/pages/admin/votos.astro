@@ -1,0 +1,221 @@
+---
+import Admin from '../../layouts/Admin.astro';
+import { requireAdmin } from '../../lib/auth';
+import { resumenVotos } from '../../lib/votos';
+
+export const prerender = false;
+
+const sesion = requireAdmin(Astro);
+if (sesion instanceof Response) return sesion;
+
+const { ranking, jurados, totalVotos, ganadores, maximo } = await resumenVotos();
+const juradosQueVotaron = jurados.filter((j) => j.cantidad > 0).length;
+const conVotos = ranking.filter((p) => p.votos > 0).length;
+const empate = ganadores.length > 1;
+---
+
+<Admin title="Votos" usuario={sesion} activo="votos">
+  <section class="kpis">
+    <div class="kpi kpi-violeta">
+      <strong>{totalVotos}</strong>
+      <span>{totalVotos === 1 ? 'Voto emitido' : 'Votos emitidos'}</span>
+    </div>
+    <div class="kpi kpi-arena">
+      <strong>{juradosQueVotaron}/{jurados.length}</strong>
+      <span>Jurados que ya votaron</span>
+    </div>
+    <div class="kpi kpi-rosa">
+      <strong>{conVotos}</strong>
+      <span>Postulantes con votos</span>
+    </div>
+  </section>
+
+  {ganadores.length === 0 ? (
+    <section class="panel ganador ganador-vacio">
+      <p class="eyebrow">Resultado</p>
+      <h1>Todavía no hay ganador</h1>
+      <p>Cuando el jurado empiece a votar, acá se ve quién va primero.</p>
+    </section>
+  ) : (
+    <section class:list={['panel', 'ganador', { empate }]}>
+      <p class="eyebrow">{empate ? 'Empate en el primer puesto' : 'Ganador'}</p>
+      {empate ? (
+        <ul class="ganadores-lista">
+          {ganadores.map((g) => (
+            <li>
+              <a href={`/admin/${g.id}`}>
+                <strong>{g.nombre} {g.apellido}</strong>
+                <span>{g.empresa}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <a class="ganador-unico" href={`/admin/${ganadores[0].id}`}>
+          <h1>{ganadores[0].nombre} {ganadores[0].apellido}</h1>
+          <p class="empresa">{ganadores[0].empresa}</p>
+        </a>
+      )}
+      <p class="tally">
+        {empate
+          ? `${maximo} ${maximo === 1 ? 'voto' : 'votos'} cada uno`
+          : `${maximo} ${maximo === 1 ? 'voto' : 'votos'}${ganadores[0].votantes.length ? ` · ${ganadores[0].votantes.map((v) => v.nombre).join(', ')}` : ''}`}
+      </p>
+    </section>
+  )}
+
+  <div class="columnas">
+    <section class="panel">
+      <div class="tabla-cabecera">
+        <p>Ranking de postulantes</p>
+      </div>
+      {ranking.length === 0 ? (
+        <p class="vacio">No hay postulantes para mostrar.</p>
+      ) : (
+        <div class="tabla-scroll">
+          <table class="tabla">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Postulante</th>
+                <th>Empresa</th>
+                <th>Votos</th>
+                <th>Quién votó</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranking.map((p) => {
+                const puesto = p.votos === 0 ? '—' : String(ranking.findIndex((x) => x.votos === p.votos) + 1);
+                const ancho = maximo > 0 ? Math.round((p.votos / maximo) * 100) : 0;
+                const esGanador = p.votos > 0 && p.votos === maximo;
+                return (
+                  <tr class:list={[{ ganador: esGanador }]}>
+                    <td class="col-puesto">{puesto}</td>
+                    <td>
+                      <a href={`/admin/${p.id}`} class="nombre">{p.nombre} {p.apellido}</a>
+                      <span class="sec">{p.localidad ?? '—'}{p.rubro ? ` · ${p.rubro}` : ''}</span>
+                    </td>
+                    <td>
+                      <span class="fuerte">{p.empresa}</span>
+                      <span class={`estado tipo-${p.tipo}`}>
+                        {p.tipo === 'nominacion' ? 'Nominación' : 'Postulación'}
+                      </span>
+                    </td>
+                    <td class="col-votos">
+                      <strong>{p.votos}</strong>
+                      <span class="barra" aria-hidden="true">
+                        <i style={`width:${ancho}%`}></i>
+                      </span>
+                    </td>
+                    <td class="sec">
+                      {p.votantes.length === 0 ? '—' : p.votantes.map((v) => v.nombre).join(', ')}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+
+    <aside class="panel jurados">
+      <div class="tabla-cabecera">
+        <p>Jurado</p>
+      </div>
+      <ul>
+        {jurados.map((j) => (
+          <li>
+            <div>
+              <strong>{j.nombre}</strong>
+              <span>{j.email}</span>
+            </div>
+            <em class:list={[{ pendiente: j.cantidad === 0 }]}>
+              {j.cantidad === 0 ? 'Sin votos' : `${j.cantidad} ${j.cantidad === 1 ? 'voto' : 'votos'}`}
+            </em>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  </div>
+</Admin>
+
+<style>
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+  .kpi {
+    background: #fff; border: 1px solid var(--linea); border-radius: 16px;
+    padding: 1.25rem 1.4rem; box-shadow: var(--sombra-sm);
+    border-left: 5px solid var(--linea);
+  }
+  .kpi strong { display: block; font-size: 2rem; font-weight: 800; line-height: 1; color: var(--tinta); }
+  .kpi span { display: block; font-size: .76rem; color: var(--tinta-suave); margin-top: .35rem; font-weight: 500; }
+  .kpi-violeta { border-left-color: var(--violeta); }
+  .kpi-rosa { border-left-color: #e59aa8; }
+  .kpi-arena { border-left-color: var(--arena); }
+  @media (max-width: 800px) { .kpis { grid-template-columns: 1fr; } }
+
+  .ganador {
+    padding: 1.6rem 1.8rem; margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, #f7efe2 0%, #fff 55%);
+    border-color: #d7c4a6;
+  }
+  .ganador.empate { background: linear-gradient(135deg, #ede4f5 0%, #fff 60%); border-color: var(--violeta-200); }
+  .ganador-vacio { background: #fff; border-color: var(--linea); }
+  .eyebrow {
+    font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: #7a6240; margin: 0 0 .4rem;
+  }
+  .ganador.empate .eyebrow, .ganador-vacio .eyebrow { color: var(--violeta); }
+  .ganador h1 { font-size: clamp(1.5rem, 3vw, 2.1rem); margin: 0 0 .2rem; color: var(--tinta); }
+  .ganador-vacio h1 { font-size: 1.4rem; }
+  .ganador-vacio p { margin: .35rem 0 0; color: var(--tinta-suave); }
+  .ganador-unico { color: inherit; display: block; }
+  .ganador-unico:hover { text-decoration: none; }
+  .ganador-unico:hover h1 { color: var(--violeta); }
+  .empresa { margin: 0; font-weight: 600; color: var(--violeta); }
+  .tally { margin: .75rem 0 0; font-size: .86rem; color: var(--tinta-suave); }
+  .ganadores-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+  .ganadores-lista a { display: flex; flex-direction: column; color: inherit; }
+  .ganadores-lista a:hover { text-decoration: none; }
+  .ganadores-lista strong { font-size: 1.2rem; }
+
+  .columnas { display: grid; grid-template-columns: 1fr 280px; gap: 1.25rem; align-items: start; }
+  @media (max-width: 1000px) { .columnas { grid-template-columns: 1fr; } }
+
+  .tabla-cabecera { padding: 1rem 1.25rem; border-bottom: 1px solid var(--linea); }
+  .tabla-cabecera p { margin: 0; font-size: .82rem; color: var(--tinta-suave); font-weight: 600; }
+  .vacio { padding: 2rem 1.25rem; color: var(--tinta-suave); }
+
+  .tabla-scroll { overflow-x: auto; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: .86rem; }
+  .tabla th {
+    text-align: left; padding: .7rem 1rem;
+    font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--tinta-suave); background: #faf8fb;
+    border-bottom: 1px solid var(--linea); white-space: nowrap;
+  }
+  .tabla td { padding: .8rem 1rem; border-bottom: 1px solid #f1edf3; vertical-align: middle; }
+  .tabla tbody tr:hover { background: #fcfafd; }
+  .tabla tbody tr.ganador { background: #f7efe2; }
+  .col-puesto { color: var(--tinta-suave); font-variant-numeric: tabular-nums; font-weight: 700; width: 2.5rem; }
+  .nombre { display: block; font-weight: 600; color: var(--violeta); }
+  .fuerte { display: block; font-weight: 600; color: var(--tinta); margin-bottom: .25rem; }
+  .sec { display: block; font-size: .76rem; color: var(--tinta-suave); }
+  .col-votos { min-width: 110px; }
+  .col-votos strong { display: block; font-variant-numeric: tabular-nums; }
+  .barra {
+    display: block; height: 6px; background: #efe8f4; border-radius: 99px; margin-top: .35rem; overflow: hidden;
+  }
+  .barra i { display: block; height: 100%; background: var(--grad-oro); border-radius: 99px; }
+
+  .jurados ul { list-style: none; margin: 0; padding: .4rem 0; }
+  .jurados li {
+    display: flex; justify-content: space-between; gap: .8rem; align-items: center;
+    padding: .85rem 1.25rem; border-bottom: 1px solid #f1edf3;
+  }
+  .jurados li:last-child { border-bottom: 0; }
+  .jurados strong { display: block; font-size: .9rem; }
+  .jurados span { display: block; font-size: .74rem; color: var(--tinta-suave); }
+  .jurados em { font-style: normal; font-size: .76rem; font-weight: 700; color: var(--exito); white-space: nowrap; }
+  .jurados em.pendiente { color: var(--tinta-suave); font-weight: 500; }
+</style>
