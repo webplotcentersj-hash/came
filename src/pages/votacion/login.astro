@@ -1,0 +1,92 @@
+---
+import '../../styles/global.css';
+import LogoPremio from '../../components/LogoPremio.astro';
+import { createSession, findAdminByEmail, verifyPassword, getSession } from '../../lib/auth';
+
+export const prerender = false;
+
+const sesion = getSession(Astro.cookies);
+if (sesion) {
+  return Astro.redirect(sesion.rol === 'votacion' ? '/votacion' : '/admin');
+}
+
+const destino = Astro.url.searchParams.get('next') || '/votacion';
+
+let error = '';
+let usuario = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  usuario = String(form.get('usuario') ?? '').trim().toLowerCase();
+  const password = String(form.get('password') ?? '');
+
+  try {
+    const cuenta = usuario ? await findAdminByEmail(usuario) : null;
+    if (cuenta && cuenta.rol === 'votacion' && verifyPassword(password, cuenta.password_hash)) {
+      createSession(Astro.cookies, cuenta);
+      return Astro.redirect(destino.startsWith('/votacion') ? destino : '/votacion');
+    }
+    error = 'Usuario o contraseña incorrectos.';
+  } catch (err) {
+    console.error('[votacion/login]', err);
+    error = 'No hay conexión con la base. Probá de nuevo en unos minutos.';
+  }
+}
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ingresar a votación</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="login">
+      <div class="caja tarjeta">
+        <LogoPremio size={76} variante="violeta" class="emblema-login" />
+        <h1>Votación del jurado</h1>
+        <p class="sub">Premio Joven Empresario Sanjuanino · Edición 2026</p>
+
+        {error && <div class="error-box" role="alert">{error}</div>}
+
+        <form method="post">
+          <div class="campo">
+            <label for="usuario">Usuario</label>
+            <input class="control" id="usuario" name="usuario" type="text" required autocomplete="username" value={usuario} autofocus />
+          </div>
+          <div class="campo">
+            <label for="password">Contraseña</label>
+            <input class="control" id="password" name="password" type="password" required autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-violeta ancho">Ingresar</button>
+        </form>
+      </div>
+    </main>
+  </body>
+</html>
+
+<style>
+  .login {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.25rem;
+    background: linear-gradient(160deg, var(--rosa) 0%, #b78ac9 55%, var(--violeta) 100%);
+  }
+  .caja { width: 100%; max-width: 420px; padding: 2.5rem 2rem; text-align: center; }
+  .caja :global(.emblema-login) { margin: 0 auto 1.35rem; }
+  h1 { font-size: 1.45rem; color: var(--violeta); margin-bottom: .2rem; }
+  .sub { font-size: .82rem; color: var(--tinta-suave); margin-bottom: 1.75rem; }
+  form { text-align: left; }
+  .ancho { width: 100%; margin-top: .5rem; }
+  .error-box {
+    background: #fdeceb; color: var(--alerta); border: 1px solid #f3c9c3;
+    border-radius: 10px; padding: .7rem 1rem; font-size: .85rem; font-weight: 600;
+    margin-bottom: 1.25rem;
+  }
+</style>

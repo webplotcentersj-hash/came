@@ -6,6 +6,8 @@ import { env } from './env';
 const COOKIE = 'pjes_session';
 const MAX_AGE = 60 * 60 * 8; // 8 horas
 
+export type Rol = 'admin' | 'votacion';
+
 function secret(): string {
   const s = env('SESSION_SECRET');
   if (!s || s.length < 16) {
@@ -35,22 +37,31 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 /* ---------- sesión (cookie firmada HMAC) ---------- */
 
-interface SessionData {
+export interface SessionData {
   id: number;
   email: string;
   nombre: string;
+  rol: Rol;
   exp: number;
+}
+
+function rolDe(valor: unknown): Rol {
+  return valor === 'votacion' ? 'votacion' : 'admin';
 }
 
 function sign(payload: string): string {
   return crypto.createHmac('sha256', secret()).update(payload).digest('base64url');
 }
 
-export function createSession(cookies: AstroCookies, admin: { id: number; email: string; nombre: string }) {
+export function createSession(
+  cookies: AstroCookies,
+  admin: { id: number; email: string; nombre: string; rol?: Rol | string | null },
+) {
   const data: SessionData = {
     id: admin.id,
     email: admin.email,
     nombre: admin.nombre,
+    rol: rolDe(admin.rol),
     exp: Date.now() + MAX_AGE * 1000,
   };
   const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
@@ -78,7 +89,8 @@ export function getSession(cookies: AstroCookies): SessionData | null {
       return null;
     }
     const data = JSON.parse(Buffer.from(payload, 'base64url').toString()) as SessionData;
-    return data.exp > Date.now() ? data : null;
+    if (data.exp <= Date.now()) return null;
+    return { ...data, rol: rolDe(data.rol) };
   } catch {
     return null;
   }
@@ -91,17 +103,49 @@ export function requireAdmin(ctx: APIContext): SessionData | Response {
     const next = encodeURIComponent(ctx.url.pathname + ctx.url.search);
     return ctx.redirect(`/admin/login?next=${next}`);
   }
+  if (session.rol !== 'admin') {
+    return ctx.redirect('/votacion');
+  }
   return session;
 }
 
-export async function findAdminByEmail(email: string) {
+/** Jurado de votación. No entra al panel de administración. */
+export function requireVotacion(ctx: APIContext): SessionData | Response {
+  const session = getSession(ctx.cookies);
+  if (!session) {
+    const next = encodeURIComponent(ctx.url.pathname + ctx.url.search);
+    return ctx.redirect(`/votacion/login?next=${next}`);
+  }
+  if (session.rol !== 'votacion') {
+    return ctx.redirect('/admin');
+  }
+  return session;
+}
+
+export type AdminRecord = {
+  id: number;
+  email: string;
+  nombre: string;
+  password_hash: string;
+  rol: Rol;
+};
+
+export async function findAdminByEmail(email: string): Promise<AdminRecord | null> {
   const { data, error } = await db()
     .from('admins')
-    .select('id, email, nombre, password_hash')
+    .select('id, email, nombre, password_hash, rol')
     .eq('email', email.trim().toLowerCase())
     .maybeSingle();
   if (error) throw error;
-  return data as { id: number; email: string; nombre: string; password_hash: string } | null;
+  if (!data) return null;
+  const row = data as {
+    id: number;
+    email: string;
+    nombre: string;
+    password_hash: string;
+    rol?: string | null;
+  };
+  return { ...row, rol: rolDe(row.rol) };
 }
 
 export async function countAdmins(): Promise<number> {

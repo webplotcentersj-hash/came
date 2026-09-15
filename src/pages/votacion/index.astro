@@ -1,0 +1,167 @@
+---
+import Votacion from '../../layouts/Votacion.astro';
+import { requireVotacion } from '../../lib/auth';
+import { listarParaVotar, alternarVoto } from '../../lib/votos';
+import { edad } from '../../lib/fechas';
+
+export const prerender = false;
+
+const sesion = requireVotacion(Astro);
+if (sesion instanceof Response) return sesion;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const id = Number(form.get('postulacion_id'));
+  if (Number.isInteger(id) && id > 0) {
+    await alternarVoto(sesion.id, id);
+  }
+  return Astro.redirect(Astro.url.pathname + Astro.url.search, 303);
+}
+
+const q = (Astro.url.searchParams.get('q') ?? '').trim().toLowerCase();
+const { filas: todas, votados } = await listarParaVotar(sesion.id);
+const filas = q
+  ? todas.filter((p) =>
+      [p.nombre, p.apellido, p.empresa, p.rubro, p.localidad]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    )
+  : todas;
+---
+
+<Votacion title="Postulantes" usuario={sesion}>
+  <header class="voto-cabecera">
+    <div>
+      <p class="eyebrow">Jurado · {sesion.nombre}</p>
+      <h1>Postulantes</h1>
+      <p class="ayuda">
+        Marcá a quienes votás. Los que ya votaste se ven en otro color.
+        El resto del jurado no ve tu voto.
+      </p>
+    </div>
+    <div class="conteo">
+      <strong>{votados}</strong>
+      <span>voto{votados === 1 ? '' : 's'} tuyo{votados === 1 ? '' : 's'}</span>
+    </div>
+  </header>
+
+  <form method="get" class="buscador">
+    <input
+      class="control"
+      type="search"
+      name="q"
+      value={q}
+      placeholder="Buscar por nombre, empresa o rubro…"
+      aria-label="Buscar postulantes"
+    />
+    <button type="submit" class="btn btn-violeta btn-sm">Buscar</button>
+    {q && <a href="/votacion" class="btn btn-fantasma btn-sm">Limpiar</a>}
+  </form>
+
+  {filas.length === 0 ? (
+    <p class="vacio">No hay postulantes que coincidan.</p>
+  ) : (
+    <ul class="grid">
+      {filas.map((p) => {
+        const anios = edad(p.fecha_nacimiento);
+        return (
+          <li class:list={['tarjeta', { votada: p.votado }]} id={`p-${p.id}`}>
+            <div class="top">
+              <span class={`tipo tipo-${p.tipo}`}>
+                {p.tipo === 'nominacion' ? 'Nominación' : 'Postulación'}
+              </span>
+              {p.votado && <span class="badge">Ya votaste</span>}
+            </div>
+            <h2>{p.nombre} {p.apellido}</h2>
+            <p class="empresa">{p.empresa}</p>
+            <p class="meta">
+              {[
+                p.rubro,
+                p.localidad,
+                anios !== null ? `${anios} años` : null,
+                p.empleados,
+                p.anio_inicio ? `desde ${p.anio_inicio}` : null,
+              ].filter(Boolean).join(' · ')}
+            </p>
+            {p.historia && (
+              <details>
+                <summary>Leer la historia</summary>
+                <p class="historia">{p.historia}</p>
+              </details>
+            )}
+            <form method="post">
+              <input type="hidden" name="postulacion_id" value={p.id} />
+              <button type="submit" class:list={['btn', 'btn-sm', p.votado ? 'btn-quitar' : 'btn-violeta']}>
+                {p.votado ? 'Quitar mi voto' : 'Votar'}
+              </button>
+            </form>
+          </li>
+        );
+      })}
+    </ul>
+  )}
+</Votacion>
+
+<style>
+  .voto-cabecera {
+    display: flex; justify-content: space-between; gap: 1.5rem; align-items: flex-end;
+    margin-bottom: 1.5rem; flex-wrap: wrap;
+  }
+  .eyebrow {
+    font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--violeta); margin: 0 0 .35rem;
+  }
+  h1 { font-size: 1.7rem; color: var(--tinta); margin: 0 0 .4rem; }
+  .ayuda { margin: 0; max-width: 52ch; color: var(--tinta-suave); font-size: .9rem; }
+  .conteo {
+    background: #fff; border: 1px solid var(--linea); border-radius: 16px;
+    padding: .9rem 1.2rem; min-width: 140px; text-align: center;
+  }
+  .conteo strong { display: block; font-size: 1.8rem; font-weight: 800; color: var(--violeta); line-height: 1; }
+  .conteo span { font-size: .76rem; color: var(--tinta-suave); }
+
+  .buscador { display: flex; gap: .65rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .buscador .control { flex: 1 1 240px; }
+
+  .vacio { color: var(--tinta-suave); }
+
+  .grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;
+  }
+  .tarjeta {
+    background: #fff; border: 1px solid var(--linea); border-radius: 16px;
+    padding: 1.15rem 1.2rem; box-shadow: var(--sombra-sm);
+    display: flex; flex-direction: column; gap: .45rem;
+  }
+  .tarjeta.votada {
+    background: #f7efe2;
+    border-color: #d7c4a6;
+    box-shadow: var(--sombra-oro);
+  }
+  .top { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; }
+  .tipo {
+    font-size: .68rem; font-weight: 700; border-radius: 999px; padding: .2rem .55rem;
+  }
+  .tipo-postulacion { background: #eee9f2; color: #55496b; }
+  .tipo-nominacion { background: var(--rosa); color: var(--violeta); }
+  .badge {
+    margin-left: auto; font-size: .68rem; font-weight: 800; letter-spacing: .04em;
+    text-transform: uppercase; color: #7a6240; background: #ead9bd;
+    border-radius: 999px; padding: .2rem .55rem;
+  }
+  h2 { font-size: 1.08rem; margin: 0; color: var(--tinta); }
+  .empresa { margin: 0; font-weight: 600; color: var(--violeta); font-size: .92rem; }
+  .meta { margin: 0; font-size: .78rem; color: var(--tinta-suave); }
+  details { margin: .2rem 0 .4rem; }
+  summary { cursor: pointer; font-size: .8rem; font-weight: 600; color: var(--violeta); }
+  .historia { white-space: pre-wrap; font-size: .84rem; line-height: 1.6; color: var(--tinta-2); margin: .5rem 0 0; }
+  .tarjeta form { margin-top: auto; padding-top: .6rem; }
+  .btn-quitar {
+    background: #fff; color: #7a6240; border: 1.5px solid #d7c4a6;
+    border-radius: 999px; padding: .4rem 1rem; font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-quitar:hover { background: #ead9bd; }
+</style>

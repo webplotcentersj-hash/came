@@ -1,0 +1,68 @@
+---
+import '../styles/global.css';
+import LogoPremio from '../components/LogoPremio.astro';
+
+interface Props {
+  title: string;
+  usuario: { nombre: string; email: string };
+}
+
+const { title, usuario } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{title} · Votación</title>
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="voto-body">
+    <header class="voto-barra">
+      <div class="voto-barra-int">
+        <a href="/votacion" class="voto-marca">
+          <LogoPremio size={32} variante="blanco" />
+          <span>
+            <strong>Votación del jurado</strong>
+            <em>Premio Joven Empresario Sanjuanino</em>
+          </span>
+        </a>
+        <div class="voto-usuario">
+          <span title={usuario.email}>{usuario.nombre}</span>
+          <form method="post" action="/votacion/logout">
+            <button type="submit" class="salir">Salir</button>
+          </form>
+        </div>
+      </div>
+    </header>
+    <main class="voto-main">
+      <slot />
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  .voto-body { background: #f6f3f8; min-height: 100vh; }
+  .voto-barra { background: var(--violeta-900); color: #fff; position: sticky; top: 0; z-index: 40; }
+  .voto-barra-int {
+    max-width: 1180px; margin-inline: auto; padding: .8rem 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem;
+  }
+  .voto-marca { display: flex; align-items: center; gap: .6rem; color: #fff; }
+  .voto-marca:hover { text-decoration: none; }
+  .voto-marca strong { display: block; font-size: .88rem; line-height: 1.2; }
+  .voto-marca em { display: block; font-style: normal; font-size: .68rem; color: rgba(255,216,221,.7); }
+  .voto-usuario { margin-left: auto; display: flex; align-items: center; gap: .9rem; font-size: .84rem; }
+  .voto-usuario > span { color: rgba(255,255,255,.85); }
+  .voto-body .salir {
+    background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25);
+    border-radius: 8px; padding: .35rem .85rem; font: inherit; font-size: .8rem; cursor: pointer;
+  }
+  .voto-body .salir:hover { background: rgba(255,255,255,.22); }
+  .voto-main { max-width: 1180px; margin-inline: auto; padding: 2rem 1.5rem 4rem; }
+</style>

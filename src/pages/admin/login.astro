@@ -5,9 +5,9 @@ import { createSession, findAdminByEmail, verifyPassword, getSession, countAdmin
 
 export const prerender = false;
 
-// Si ya hay sesión activa, al panel directo.
-if (getSession(Astro.cookies)) {
-  return Astro.redirect('/admin');
+const sesionActiva = getSession(Astro.cookies);
+if (sesionActiva) {
+  return Astro.redirect(sesionActiva.rol === 'votacion' ? '/votacion' : '/admin');
 }
 
 const destino = Astro.url.searchParams.get('next') || '/admin';
@@ -35,6 +35,9 @@ if (!errorBase && Astro.request.method === 'POST') {
 
     if (admin && verifyPassword(password, admin.password_hash)) {
       createSession(Astro.cookies, admin);
+      if (admin.rol === 'votacion') {
+        return Astro.redirect('/votacion');
+      }
       return Astro.redirect(destino.startsWith('/admin') ? destino : '/admin');
     }
     error = 'Email o contraseña incorrectos.';
